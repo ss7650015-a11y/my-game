@@ -2157,10 +2157,6 @@ function checkGoal() {
 
 function nextLevel() {
 
-  if (typeof window.__saveLevelComplete === "function") {
-    window.__saveLevelComplete();
-  }
-
   smartAwardStars();
 
   if (
@@ -5312,16 +5308,7 @@ function loop() {
 
   checkGoal();
 
-  if (typeof window.__updateCheckpointFlowers === "function") {
-    window.__updateCheckpointFlowers();
-  }
-
   draw();
-
-  if (typeof window.__drawCheckpointFlowers === "function") {
-    window.__drawCheckpointFlowers();
-  }
-
   drawSmartFeatures();
 
 
@@ -5427,8 +5414,6 @@ function updateStartMenuTexts() {
   const t = menuText[selectedLanguage];
   startMenu.querySelector('.game-title').textContent = t.title;
   startMenu.querySelector('.play-btn').textContent = t.play;
-  const loadButton = startMenu.querySelector('.load-btn');
-  if (loadButton) loadButton.textContent = selectedLanguage === 'en' ? '💾 Load Game' : '💾 تحميل الحفظ';
   startMenu.querySelector('.settings-btn').textContent = t.settings;
   const exitButton = startMenu.querySelector('.exit-btn');
   if (exitButton) exitButton.textContent = t.exit;
@@ -5476,7 +5461,6 @@ function initStartScreen() {
     </div>
     <h1 class="game-title" style="font-size:clamp(28px,6vw,46px);margin:12px 0 25px">${menuText[selectedLanguage].title}</h1>
     <button class="play-btn" style="display:block;width:100%;padding:17px 20px;border:0;border-radius:16px;background:#27ae60;color:#fff;font-size:24px;font-weight:800;cursor:pointer;box-shadow:0 8px 0 #176b3a">${menuText[selectedLanguage].play}</button>
-    <button class="load-btn" style="display:block;width:100%;margin-top:18px;padding:17px 20px;border:0;border-radius:16px;background:#2980b9;color:#fff;font-size:24px;font-weight:800;cursor:pointer;box-shadow:0 8px 0 #1b4f72">💾 تحميل الحفظ</button>
     <button class="settings-btn" style="display:block;width:100%;margin-top:18px;padding:17px 20px;border:0;border-radius:16px;background:#27ae60;color:#fff;font-size:24px;font-weight:800;cursor:pointer;box-shadow:0 8px 0 #176b3a">${menuText[selectedLanguage].settings}</button>
     <button class="exit-btn" style="display:block;width:100%;margin-top:18px;padding:17px 20px;border:0;border-radius:16px;background:#c0392b;color:#fff;font-size:24px;font-weight:800;cursor:pointer;box-shadow:0 8px 0 #7f241b">${menuText[selectedLanguage].exit}</button>
     <div style="margin-top:18px;font-size:13px;opacity:.75">15 مراحل • 7 حيوانات • 3 أرواح</div>
@@ -5527,16 +5511,6 @@ function initStartScreen() {
     settingsPanel = null;
 
     startGame();
-  });
-
-  card.querySelector('.load-btn').addEventListener('click', () => {
-    initAudio();
-    soundButton();
-    if (typeof window.__loadSavedGame === 'function') {
-      window.__loadSavedGame();
-    } else {
-      alert(selectedLanguage === 'en' ? 'Save system is still loading. Try again.' : 'نظام الحفظ لم يجهز بعد. حاول مرة أخرى.');
-    }
   });
 
   card.querySelector('.settings-btn').addEventListener('click', () => {
@@ -6146,7 +6120,6 @@ setLanguage(selectedLanguage);
     try {
       const old = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}");
       const data = {
-        ...old,
         level: Math.max(old.level || 1, getStage()),
         coins: getCoins(),
         score: getScore(),
@@ -8321,376 +8294,561 @@ setLanguage(selectedLanguage);
   window.addEventListener('resize', sync);
   if (touchQuery.addEventListener) touchQuery.addEventListener('change', sync);
 })();
+
 /* ============================================================
-   CHECKPOINT SAVE SYSTEM — RED FLOWERS + LOAD GAME
-   Saves at 25%, 50% and 75% of every level.
-   Level completion is also saved. Uses the existing localStorage save.
+   CHECKPOINT SAVE SYSTEM — ADDITIVE ONLY
+   Adds 3 red-flower checkpoints per stage + Load Game button.
+   Does not replace or restyle the original game systems.
    ============================================================ */
-(function installCheckpointSaveSystem(){
-  if (window.__CheckpointSaveSystemInstalled) return;
-  window.__CheckpointSaveSystemInstalled = true;
+(function installCheckpointSaveSystem() {
+  if (window.__NaughtyCheckpointSaveInstalled) return;
+  window.__NaughtyCheckpointSaveInstalled = true;
 
-  const SAVE_KEY = "naughtyBoySaveV3";
-  const CHECKPOINTS = [0.25, 0.50, 0.75];
-  const checkpointNames = ["quarter", "half", "threeQuarter"];
+  const CHECKPOINT_KEY = "naughtyBoyCheckpointSaveV1";
+  const CHECKPOINT_COUNT = 3;
+  const checkpointRatios = [0.25, 0.50, 0.75];
 
-  let flowers = [];
-  let lastCheckpointLevel = 0;
-  let lastDraw = null;
+  let checkpointState = {
+    level: 1,
+    checkpoint: 0,
+    score: 0,
+    coins: 0,
+    lives: 3,
+    completedLevels: {},
+    allCompleted: false
+  };
 
-  function getStage(){
-    return Math.max(1, Math.min(15, Number(typeof currentLevel !== "undefined" ? currentLevel : 1) || 1));
+  function readSave() {
+    try {
+      const raw = localStorage.getItem(CHECKPOINT_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (!data || typeof data !== "object") return null;
+      return {
+        level: Math.max(1, Math.min(TOTAL_LEVELS, Number(data.level) || 1)),
+        checkpoint: Math.max(0, Math.min(CHECKPOINT_COUNT, Number(data.checkpoint) || 0)),
+        score: Math.max(0, Number(data.score) || 0),
+        coins: Math.max(0, Number(data.coins) || 0),
+        lives: 3,
+        completedLevels: data.completedLevels && typeof data.completedLevels === "object"
+          ? data.completedLevels
+          : {},
+        allCompleted: !!data.allCompleted
+      };
+    } catch (_) {
+      return null;
+    }
   }
 
-  function getWidth(){
-    return Math.max(1000, Number(typeof currentLevelWidth !== "undefined" ? currentLevelWidth : 81000) || 81000);
+  function writeSave(extra = {}) {
+    try {
+      const data = {
+        level: Math.max(1, Math.min(TOTAL_LEVELS, Number(extra.level ?? currentLevel) || 1)),
+        checkpoint: Math.max(0, Math.min(CHECKPOINT_COUNT, Number(extra.checkpoint ?? 0) || 0)),
+        score: Math.max(0, Number(extra.score ?? score) || 0),
+        coins: Math.max(0, Number(extra.coins ?? coins) || 0),
+        lives: 3,
+        completedLevels: extra.completedLevels || checkpointState.completedLevels || {},
+        allCompleted: !!extra.allCompleted,
+        savedAt: Date.now()
+      };
+
+      localStorage.setItem(CHECKPOINT_KEY, JSON.stringify(data));
+      checkpointState = {
+        level: data.level,
+        checkpoint: data.checkpoint,
+        score: data.score,
+        coins: data.coins,
+        lives: 3,
+        completedLevels: data.completedLevels,
+        allCompleted: data.allCompleted
+      };
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
-  function readSave(){
-    try { return JSON.parse(localStorage.getItem(SAVE_KEY) || "{}"); }
-    catch (_) { return {}; }
+  function hasSave() {
+    return !!readSave();
   }
 
-  function writeSave(data){
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); }
-    catch (_) {}
+  function stageCheckpointX(level, index) {
+    const width = Number(
+      level === currentLevel && currentLevelWidth
+        ? currentLevelWidth
+        : (typeof currentLevelWidth !== "undefined" ? currentLevelWidth : 81000)
+    ) || 81000;
+
+    return width * checkpointRatios[index];
   }
 
-  function getPlayer(){
-    return (typeof player !== "undefined" && player) ? player : null;
-  }
-
-  function saveCheckpoint(fraction, index){
-    const stage = getStage();
-    const p = getPlayer();
-    const data = readSave();
-    data.level = Math.max(Number(data.level || 1), stage);
-    data.checkpoint = {
-      level: stage,
-      fraction,
-      x: p ? Number(p.x || 0) : Math.floor(getWidth() * fraction),
-      score: Number(typeof score !== "undefined" ? score : 0) || 0,
-      coins: Number(typeof coins !== "undefined" ? coins : 0) || 0,
-      lives: Math.max(1, Number(typeof lives !== "undefined" ? lives : 3) || 3),
-      checkpointIndex: index,
-      savedAt: Date.now()
-    };
-    data.checkpoints = data.checkpoints || {};
-    data.checkpoints[stage] = data.checkpoints[stage] || {};
-    data.checkpoints[stage][checkpointNames[index]] = true;
-    data.lastSavedLevel = stage;
-    writeSave(data);
-
-    announce(
-      lang() === "en"
-        ? "💾 Checkpoint saved!"
-        : "💾 تم حفظ التقدم!"
+  function checkpointWasCollected(index) {
+    const save = checkpointState || {};
+    return (
+      Number(save.level) === Number(currentLevel) &&
+      Number(save.checkpoint) > index
     );
   }
 
-  function saveLevelComplete(){
-    const stage = getStage();
-    const data = readSave();
-    data.completedLevels = data.completedLevels || {};
-    data.completedLevels[stage] = true;
-    data.completedLevel = Math.max(Number(data.completedLevel || 0), stage);
-    data.level = Math.max(Number(data.level || 1), Math.min(15, stage + 1));
-    data.checkpoint = null;
-    data.checkpoints = data.checkpoints || {};
-    data.checkpoints[stage] = {
-      quarter: true,
-      half: true,
-      threeQuarter: true,
-      complete: true
-    };
-    data.score = Number(typeof score !== "undefined" ? score : 0) || 0;
-    data.coins = Number(typeof coins !== "undefined" ? coins : 0) || 0;
-    writeSave(data);
-  }
-
-  function getFlowerSurface(targetX){
-    const list = Array.isArray(platforms) ? platforms : [];
-    let best = null;
-    let bestDistance = Infinity;
-
-    for (const p of list) {
-      if (!p || !Number.isFinite(Number(p.x)) || !Number.isFinite(Number(p.width))) continue;
-      const left = Number(p.x);
-      const right = left + Number(p.width);
-      const y = Number(p.y);
-      if (!Number.isFinite(y)) continue;
-
-      // Prefer a platform directly under the checkpoint.
-      if (targetX >= left && targetX <= right) {
-        const x = Math.max(left + 24, Math.min(right - 24, targetX));
-        return { x, y };
-      }
-
-      const distance = targetX < left ? left - targetX : targetX - right;
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        const x = Math.max(left + 24, Math.min(right - 24, targetX));
-        best = { x, y };
-      }
-    }
-
-    return best || { x: targetX, y: 550 };
-  }
-
-  function makeFlowers(){
-    const stage = getStage();
-    const width = getWidth();
-    const data = readSave();
-    const saved = data.checkpoints && data.checkpoints[stage] ? data.checkpoints[stage] : {};
-
-    flowers = CHECKPOINTS.map((fraction, index) => {
-      const targetX = Math.floor(width * fraction);
-      const surface = getFlowerSurface(targetX);
-
-      return {
-        fraction,
-        index,
-        x: surface.x,
-        y: surface.y,
-        collected: !!saved[checkpointNames[index]],
-        pulse: Math.random() * Math.PI * 2
-      };
-    });
-
-    lastCheckpointLevel = stage;
-  }
-
-  function drawFlower(f){
-    if (typeof ctx === "undefined" || typeof cameraX === "undefined") return;
-    const sx = f.x - cameraX;
-    if (sx < -90 || sx > canvas.width + 90) return;
-
-    const y = Number(f.y || 550);
-    const t = Date.now() / 240 + f.pulse;
-    const bob = Math.sin(t) * 4;
+  function drawFlower(x, y, collected) {
+    if (collected) return;
 
     ctx.save();
-    ctx.translate(sx, y + bob);
 
-    // Green stem
-    ctx.strokeStyle = "#16843a";
-    ctx.lineWidth = 5;
+    // soft glow
+    ctx.shadowColor = "rgba(255, 35, 55, .75)";
+    ctx.shadowBlur = 12;
+
+    // green stem
+    ctx.strokeStyle = "#2e7d32";
+    ctx.lineWidth = 4;
+    ctx.lineCap = "round";
     ctx.beginPath();
-    ctx.moveTo(0, 28);
-    ctx.lineTo(0, -2);
+    ctx.moveTo(x, y + 20);
+    ctx.lineTo(x, y + 46);
     ctx.stroke();
 
-    // Leaves
-    ctx.fillStyle = "#24a148";
+    // leaves
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#43a047";
     ctx.beginPath();
-    ctx.ellipse(-9, 16, 11, 5, -0.45, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(9, 9, 11, 5, 0.45, 0, Math.PI * 2);
+    ctx.ellipse(x - 8, y + 34, 9, 4, -.45, 0, Math.PI * 2);
+    ctx.ellipse(x + 8, y + 39, 9, 4, .45, 0, Math.PI * 2);
     ctx.fill();
 
-    // Red flower head
-    const petals = 6;
-    for (let i = 0; i < petals; i++) {
-      const a = i * Math.PI * 2 / petals;
-      ctx.save();
-      ctx.rotate(a);
-      const grad = ctx.createRadialGradient(0, -12, 1, 0, -12, 15);
-      grad.addColorStop(0, "#ff7777");
-      grad.addColorStop(0.55, "#e53935");
-      grad.addColorStop(1, "#a91414");
-      ctx.fillStyle = grad;
+    // red flower petals
+    ctx.shadowColor = "rgba(255, 30, 50, .85)";
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = "#e53935";
+
+    for (let i = 0; i < 5; i++) {
+      const a = i * Math.PI * 2 / 5;
+      const px = x + Math.cos(a) * 9;
+      const py = y + Math.sin(a) * 9;
+
       ctx.beginPath();
-      ctx.ellipse(0, -12, 8, 13, 0, 0, Math.PI * 2);
+      ctx.arc(px, py, 8, 0, Math.PI * 2);
       ctx.fill();
-      ctx.restore();
     }
 
-    ctx.fillStyle = "#ffd54a";
+    // center
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#ffd54f";
     ctx.beginPath();
-    ctx.arc(0, -12, 6, 0, Math.PI * 2);
+    ctx.arc(x, y, 6, 0, Math.PI * 2);
     ctx.fill();
-
-    // Save/check mark after collection
-    if (f.collected) {
-      ctx.fillStyle = "#ffffff";
-      ctx.strokeStyle = "#148a3a";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(0, -45, 11, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      ctx.strokeStyle = "#148a3a";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(-5, -45);
-      ctx.lineTo(-1, -41);
-      ctx.lineTo(6, -49);
-      ctx.stroke();
-    }
 
     ctx.restore();
   }
 
-  function updateFlowers(){
+  function drawCheckpointFlowers() {
+    if (typeof ctx === "undefined" || typeof cameraX === "undefined") return;
+    if (typeof currentLevelWidth === "undefined" || !currentLevelWidth) return;
+
+    const groundY = 505;
+
+    for (let i = 0; i < CHECKPOINT_COUNT; i++) {
+      const worldX = stageCheckpointX(currentLevel, i);
+      const screenX = worldX - cameraX;
+
+      if (screenX < -70 || screenX > canvas.width + 70) continue;
+
+      drawFlower(
+        screenX,
+        groundY,
+        checkpointWasCollected(i)
+      );
+    }
+  }
+
+  function saveCheckpoint(index) {
+    const save = readSave() || {
+      level: currentLevel,
+      checkpoint: 0,
+      score: 0,
+      coins: 0,
+      lives: 3,
+      completedLevels: {},
+      allCompleted: false
+    };
+
+    // A checkpoint is only allowed to move forward.
+    if (Number(save.level) === Number(currentLevel)) {
+      save.checkpoint = Math.max(
+        Number(save.checkpoint) || 0,
+        index + 1
+      );
+    } else {
+      save.level = currentLevel;
+      save.checkpoint = index + 1;
+    }
+
+    save.score = Math.max(Number(save.score) || 0, Number(score) || 0);
+    save.coins = Math.max(Number(save.coins) || 0, Number(coins) || 0);
+    save.lives = 3;
+
+    writeSave(save);
+
+    // Small confirmation without changing the game's layout.
+    const old = document.getElementById("checkpointSaveToast");
+    if (old) old.remove();
+
+    const toast = document.createElement("div");
+    toast.id = "checkpointSaveToast";
+    toast.textContent =
+      selectedLanguage === "en"
+        ? "🌹 Game saved!"
+        : "🌹 تم الحفظ تلقائيًا!";
+
+    toast.style.cssText = `
+      position:fixed;
+      left:50%;
+      top:20%;
+      transform:translate(-50%,-50%);
+      z-index:10030;
+      padding:10px 16px;
+      border-radius:12px;
+      background:rgba(20,25,30,.90);
+      color:#fff;
+      font:bold 15px Arial,sans-serif;
+      box-shadow:0 6px 20px rgba(0,0,0,.3);
+      pointer-events:none;
+    `;
+
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 1300);
+
+    // Re-read so the next flower knows it was collected.
+    checkpointState = readSave() || checkpointState;
+  }
+
+  function checkCheckpointCollection() {
     if (typeof gameRunning !== "undefined" && !gameRunning) return;
-    const p = getPlayer();
-    if (!p) return;
+    if (typeof player === "undefined") return;
 
-    const stage = getStage();
-    if (lastCheckpointLevel !== stage || flowers.length !== 3) makeFlowers();
+    const save = readSave();
 
-    const px = Number(p.x || 0) + Number(p.width || 0) / 2;
-    const py = Number(p.y || 0) + Number(p.height || 0) / 2;
+    // If this is a different level, start the checkpoint state for it.
+    if (!save || Number(save.level) !== Number(currentLevel)) {
+      checkpointState = {
+        level: currentLevel,
+        checkpoint: 0,
+        score: Number(score) || 0,
+        coins: Number(coins) || 0,
+        lives: 3,
+        completedLevels: save?.completedLevels || {},
+        allCompleted: false
+      };
+    } else {
+      checkpointState = save;
+    }
 
-    flowers.forEach(f => {
-      if (f.collected) return;
-      if (Math.abs(px - f.x) < 58 && Math.abs(py - Number(f.y || 550)) < 95) {
-        f.collected = true;
-        saveCheckpoint(f.fraction, f.index);
-        playTone(880, 0.10, "sine", 0.10, 220);
-        setTimeout(() => playTone(1175, 0.12, "sine", 0.08, 180), 90);
+    const currentCheckpoint = Number(checkpointState.checkpoint) || 0;
+
+    for (let i = currentCheckpoint; i < CHECKPOINT_COUNT; i++) {
+      const x = stageCheckpointX(currentLevel, i);
+
+      if (Math.abs((player.x + player.width / 2) - x) < 34) {
+        saveCheckpoint(i);
+        break;
       }
-    });
-  }
-
-  function drawFlowersAfterGame(){
-    if (typeof ctx === "undefined") return;
-    if (lastCheckpointLevel !== getStage() || flowers.length !== 3) makeFlowers();
-    flowers.forEach(drawFlower);
-  }
-
-  function getResumeData(){
-    const data = readSave();
-    if (!data || typeof data !== "object") return null;
-    if (data.checkpoint && Number(data.checkpoint.level) >= 1) return data;
-    if (Number(data.completedLevel || 0) > 0 || Number(data.level || 1) > 1) return data;
-    return null;
-  }
-
-  function loadSavedGame(){
-    const data = getResumeData();
-    if (!data) {
-      announce(lang() === "en" ? "No saved game found." : "لا يوجد حفظ للعبة بعد.");
-      return;
     }
+  }
 
-    let resumeLevel = Number(data.checkpoint && data.checkpoint.level || 0);
-    let resumeX = Number(data.checkpoint && data.checkpoint.x || 0);
+  function saveStageCompletion(completedLevel) {
+    const save = readSave() || {
+      level: completedLevel,
+      checkpoint: CHECKPOINT_COUNT,
+      score: 0,
+      coins: 0,
+      lives: 3,
+      completedLevels: {},
+      allCompleted: false
+    };
 
-    if (!resumeLevel) {
-      const completed = Number(data.completedLevel || 0);
-      resumeLevel = completed > 0 ? Math.min(TOTAL_LEVELS, completed + 1) : Math.max(1, Number(data.level || 1));
+    const completed = {
+      ...(save.completedLevels || {}),
+      [completedLevel]: true
+    };
+
+    const allCompleted = completedLevel >= TOTAL_LEVELS;
+
+    if (allCompleted) {
+      writeSave({
+        level: TOTAL_LEVELS,
+        checkpoint: CHECKPOINT_COUNT,
+        score: Math.max(Number(save.score) || 0, Number(score) || 0),
+        coins: Math.max(Number(save.coins) || 0, Number(coins) || 0),
+        completedLevels: completed,
+        allCompleted: true
+      });
+    } else {
+      // Stage is completed, so Load Game continues at the beginning
+      // of the next stage.
+      writeSave({
+        level: completedLevel + 1,
+        checkpoint: 0,
+        score: Math.max(Number(save.score) || 0, Number(score) || 0),
+        coins: Math.max(Number(save.coins) || 0, Number(coins) || 0),
+        completedLevels: completed,
+        allCompleted: false
+      });
     }
+  }
 
-    resumeLevel = Math.max(1, Math.min(TOTAL_LEVELS, resumeLevel));
+  function applyLoadedGame(save) {
+    if (!save) return false;
 
-    currentLevel = resumeLevel;
-    score = Number(data.checkpoint && data.checkpoint.score != null ? data.checkpoint.score : data.score || 0) || 0;
-    coins = Number(data.checkpoint && data.checkpoint.coins != null ? data.checkpoint.coins : data.coins || 0) || 0;
-    lives = Math.max(1, Number(data.checkpoint && data.checkpoint.lives != null ? data.checkpoint.lives : 3) || 3);
+    try {
+      initAudio();
+    } catch (_) {}
+
+    stopGame();
+
     gameOver = false;
     gameWon = false;
     changingLevel = false;
-    gameRunning = false;
 
-    loadLevel(resumeLevel, true);
-    updateHUD();
+    currentLevel = Math.max(
+      1,
+      Math.min(TOTAL_LEVELS, Number(save.level) || 1)
+    );
 
-    // Restore the exact checkpoint position when available.
-    setTimeout(() => {
-      const p = getPlayer();
-      if (p && data.checkpoint && Number(data.checkpoint.level) === resumeLevel) {
-        const maxX = Math.max(0, getWidth() - Number(p.width || 40) - 10);
-        p.x = Math.max(0, Math.min(maxX, resumeX));
-        cameraX = Math.max(0, p.x - canvas.width * 0.35);
-      }
-      makeFlowers();
-      startGame();
-      announce(
-        lang() === "en"
-          ? `💾 Game loaded — Level ${resumeLevel}`
-          : `💾 تم تحميل الحفظ — المرحلة ${resumeLevel}`
+    score = Math.max(0, Number(save.score) || 0);
+    coins = Math.max(0, Number(save.coins) || 0);
+    lives = 3;
+
+    loadLevel(currentLevel, true);
+
+    // loadLevel() creates a fresh stage, then we move the player
+    // to the saved checkpoint without changing the stage design.
+    const checkpoint = Math.max(
+      0,
+      Math.min(CHECKPOINT_COUNT, Number(save.checkpoint) || 0)
+    );
+
+    if (checkpoint > 0 && checkpoint <= CHECKPOINT_COUNT) {
+      const index = checkpoint - 1;
+      player.x = stageCheckpointX(currentLevel, index) + 22;
+
+      const maxX = Math.max(
+        100,
+        currentLevelWidth - player.width - 30
       );
-    }, 80);
+
+      player.x = Math.min(player.x, maxX);
+      player.y = 400;
+      player.vx = 0;
+      player.vy = 0;
+      player.ground = false;
+
+      cameraX = Math.max(
+        0,
+        Math.min(
+          currentLevelWidth - canvas.width,
+          player.x - canvas.width * 0.35
+        )
+      );
+    }
+
+    checkpointState = save;
+    updateHUD();
+    draw();
+
+    if (startMenu) {
+      startMenu.remove();
+      startMenu = null;
+    }
+
+    if (settingsPanel) {
+      settingsPanel.remove();
+      settingsPanel = null;
+    }
+
+    startGame();
+    return true;
   }
 
-  // Load Game is now created directly by the core start menu above.
-  // Keep this hook only for compatibility with older cached versions.
-  function installLoadButton(){
-    const btn = document.querySelector("#gameStartMenu .load-btn");
-    if (btn) btn.textContent = lang() === "en" ? "💾 Load Game" : "💾 تحميل الحفظ";
-  }
-  setTimeout(installLoadButton, 300);
+  function addLoadButton(menu) {
+    if (!menu) return;
 
-  // Keep the button translated when the language changes.
-  const oldSetLanguage = typeof window.setLanguage === "function" ? window.setLanguage : null;
-  if (oldSetLanguage && !oldSetLanguage.__checkpointWrapped) {
-    const wrappedLanguage = function(...args){
-      const result = oldSetLanguage.apply(this, args);
-      setTimeout(() => {
-        const btn = document.querySelector("#gameStartMenu .load-btn");
-        if (btn) btn.textContent = lang() === "en" ? "💾 Load Game" : "💾 تحميل الحفظ";
-      }, 0);
-      return result;
-    };
-    wrappedLanguage.__checkpointWrapped = true;
-    window.setLanguage = wrappedLanguage;
-  }
+    const card = menu.querySelector("div");
+    const play = menu.querySelector(".play-btn");
+    const settings = menu.querySelector(".settings-btn");
 
-  // Save level completion even if the original level-complete logic remains untouched.
-  setInterval(() => {
-    try {
-      if (typeof levelComplete !== "undefined" && levelComplete) saveLevelComplete();
-      updateFlowers();
-    } catch (_) {}
-  }, 100);
+    if (!card || !play || !settings) return;
+    if (menu.querySelector(".load-game-btn")) return;
 
-  // Wrap the current draw function so the red flowers are drawn on top of the world.
-  if (typeof window.draw === "function" && !window.draw.__checkpointWrapped) {
-    lastDraw = window.draw;
-    const wrappedDraw = function(...args){
-      const result = lastDraw.apply(this, args);
-      try { drawFlowersAfterGame(); } catch (_) {}
-      return result;
-    };
-    wrappedDraw.__checkpointWrapped = true;
-    window.draw = wrappedDraw;
-  }
+    const button = document.createElement("button");
+    button.className = "load-game-btn";
+    button.type = "button";
 
-  // If the game loop uses the lexical draw binding, this wrapper is still refreshed safely.
-  setInterval(() => {
-    try {
-      if (typeof draw === "function" && !draw.__checkpointWrapped) {
-        const original = draw;
-        const wrapped = function(...args){
-          const result = original.apply(this, args);
-          try { drawFlowersAfterGame(); } catch (_) {}
-          return result;
-        };
-        wrapped.__checkpointWrapped = true;
-        draw = wrapped;
+    button.style.cssText = `
+      display:block;
+      width:100%;
+      margin-top:18px;
+      padding:17px 20px;
+      border:0;
+      border-radius:16px;
+      background:#3498db;
+      color:#fff;
+      font-size:24px;
+      font-weight:800;
+      cursor:pointer;
+      box-shadow:0 8px 0 #216a94;
+    `;
+
+    // Put Load Game between Play and Settings.
+    card.insertBefore(button, settings);
+
+    button.addEventListener("click", () => {
+      const save = readSave();
+
+      if (!save) {
+        announce(
+          selectedLanguage === "en"
+            ? "No saved game yet."
+            : "لا يوجد حفظ حتى الآن."
+        );
+        return;
       }
-    } catch (_) {}
-  }, 500);
 
-  // Rebuild flowers whenever a new level is loaded.
-  const originalLoad = typeof window.loadLevel === "function" ? window.loadLevel : null;
-  if (originalLoad && !originalLoad.__checkpointLevelWrapped) {
-    const wrappedLoad = function(...args){
-      const result = originalLoad.apply(this, args);
-      setTimeout(makeFlowers, 20);
-      return result;
-    };
-    wrappedLoad.__checkpointLevelWrapped = true;
-    window.loadLevel = wrappedLoad;
+      applyLoadedGame(save);
+    });
+
+    updateLoadButtonText(menu);
   }
 
-  // Expose the stable integration points used by the original game loop/menu.
-  window.__updateCheckpointFlowers = updateFlowers;
-  window.__drawCheckpointFlowers = drawFlowersAfterGame;
-  window.__saveLevelComplete = saveLevelComplete;
-  window.__loadSavedGame = loadSavedGame;
+  function updateLoadButtonText(menu) {
+    if (!menu) return;
 
-  setTimeout(makeFlowers, 400);
+    const button = menu.querySelector(".load-game-btn");
+    if (!button) return;
+
+    const save = readSave();
+
+    button.textContent =
+      selectedLanguage === "en"
+        ? "📥 LOAD GAME"
+        : "📥 تحميل الحفظ";
+
+    button.style.opacity = save ? "1" : ".72";
+  }
+
+  function patchMenuFunctions() {
+    if (typeof updateStartMenuTexts === "function" && !updateStartMenuTexts.__checkpointWrapped) {
+      const originalUpdate = updateStartMenuTexts;
+
+      const wrappedUpdate = function(...args) {
+        const result = originalUpdate.apply(this, args);
+        addLoadButton(startMenu);
+        updateLoadButtonText(startMenu);
+        return result;
+      };
+
+      wrappedUpdate.__checkpointWrapped = true;
+      updateStartMenuTexts = wrappedUpdate;
+    }
+
+    if (typeof initStartScreen === "function" && !initStartScreen.__checkpointWrapped) {
+      const originalInit = initStartScreen;
+
+      const wrappedInit = function(...args) {
+        const result = originalInit.apply(this, args);
+        addLoadButton(startMenu);
+        updateLoadButtonText(startMenu);
+        return result;
+      };
+
+      wrappedInit.__checkpointWrapped = true;
+      initStartScreen = wrappedInit;
+    }
+
+    addLoadButton(startMenu);
+    updateLoadButtonText(startMenu);
+  }
+
+  // Wrap nextLevel so the exact original level-completion logic remains intact.
+  if (typeof nextLevel === "function" && !nextLevel.__checkpointWrapped) {
+    const originalNextLevel = nextLevel;
+
+    const wrappedNextLevel = function(...args) {
+      const completedLevel = Number(currentLevel) || 1;
+      const result = originalNextLevel.apply(this, args);
+      saveStageCompletion(completedLevel);
+      return result;
+    };
+
+    wrappedNextLevel.__checkpointWrapped = true;
+    nextLevel = wrappedNextLevel;
+  }
+
+  // The flower checkpoints are drawn after the original game draw.
+  if (typeof draw === "function" && !draw.__checkpointWrapped) {
+    const originalDraw = draw;
+
+    const wrappedDraw = function(...args) {
+      const result = originalDraw.apply(this, args);
+      drawCheckpointFlowers();
+      return result;
+    };
+
+    wrappedDraw.__checkpointWrapped = true;
+    draw = wrappedDraw;
+  }
+
+  // Keep the current checkpoint state synchronized after every level load.
+  if (typeof loadLevel === "function" && !loadLevel.__checkpointWrapped) {
+    const originalLoad = loadLevel;
+
+    const wrappedLoad = function(...args) {
+      const result = originalLoad.apply(this, args);
+
+      const save = readSave();
+
+      if (save && Number(save.level) === Number(currentLevel)) {
+        checkpointState = save;
+      } else {
+        checkpointState = {
+          level: currentLevel,
+          checkpoint: 0,
+          score: Number(score) || 0,
+          coins: Number(coins) || 0,
+          lives: 3,
+          completedLevels: save?.completedLevels || {},
+          allCompleted: false
+        };
+      }
+
+      return result;
+    };
+
+    wrappedLoad.__checkpointWrapped = true;
+    loadLevel = wrappedLoad;
+  }
+
+  // Patch the already-created menu immediately.
+  patchMenuFunctions();
+
+  // If the language is changed later, refresh the Load Game button.
+  const languageObserver = new MutationObserver(() => {
+    updateLoadButtonText(startMenu);
+  });
+
+  if (document.body) {
+    languageObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true
+    });
+  }
+
+  // Lightweight checkpoint detector; it does not replace the game loop.
+  window.setInterval(() => {
+    if (typeof gameRunning !== "undefined" && gameRunning) {
+      checkCheckpointCollection();
+    }
+  }, 60);
+
 })();
