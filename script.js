@@ -2157,6 +2157,10 @@ function checkGoal() {
 
 function nextLevel() {
 
+  if (typeof window.__saveLevelComplete === "function") {
+    window.__saveLevelComplete();
+  }
+
   smartAwardStars();
 
   if (
@@ -5308,7 +5312,16 @@ function loop() {
 
   checkGoal();
 
+  if (typeof window.__updateCheckpointFlowers === "function") {
+    window.__updateCheckpointFlowers();
+  }
+
   draw();
+
+  if (typeof window.__drawCheckpointFlowers === "function") {
+    window.__drawCheckpointFlowers();
+  }
+
   drawSmartFeatures();
 
 
@@ -5414,6 +5427,8 @@ function updateStartMenuTexts() {
   const t = menuText[selectedLanguage];
   startMenu.querySelector('.game-title').textContent = t.title;
   startMenu.querySelector('.play-btn').textContent = t.play;
+  const loadButton = startMenu.querySelector('.load-btn');
+  if (loadButton) loadButton.textContent = selectedLanguage === 'en' ? '💾 Load Game' : '💾 تحميل الحفظ';
   startMenu.querySelector('.settings-btn').textContent = t.settings;
   const exitButton = startMenu.querySelector('.exit-btn');
   if (exitButton) exitButton.textContent = t.exit;
@@ -5461,6 +5476,7 @@ function initStartScreen() {
     </div>
     <h1 class="game-title" style="font-size:clamp(28px,6vw,46px);margin:12px 0 25px">${menuText[selectedLanguage].title}</h1>
     <button class="play-btn" style="display:block;width:100%;padding:17px 20px;border:0;border-radius:16px;background:#27ae60;color:#fff;font-size:24px;font-weight:800;cursor:pointer;box-shadow:0 8px 0 #176b3a">${menuText[selectedLanguage].play}</button>
+    <button class="load-btn" style="display:block;width:100%;margin-top:18px;padding:17px 20px;border:0;border-radius:16px;background:#2980b9;color:#fff;font-size:24px;font-weight:800;cursor:pointer;box-shadow:0 8px 0 #1b4f72">💾 تحميل الحفظ</button>
     <button class="settings-btn" style="display:block;width:100%;margin-top:18px;padding:17px 20px;border:0;border-radius:16px;background:#27ae60;color:#fff;font-size:24px;font-weight:800;cursor:pointer;box-shadow:0 8px 0 #176b3a">${menuText[selectedLanguage].settings}</button>
     <button class="exit-btn" style="display:block;width:100%;margin-top:18px;padding:17px 20px;border:0;border-radius:16px;background:#c0392b;color:#fff;font-size:24px;font-weight:800;cursor:pointer;box-shadow:0 8px 0 #7f241b">${menuText[selectedLanguage].exit}</button>
     <div style="margin-top:18px;font-size:13px;opacity:.75">15 مراحل • 7 حيوانات • 3 أرواح</div>
@@ -5511,6 +5527,16 @@ function initStartScreen() {
     settingsPanel = null;
 
     startGame();
+  });
+
+  card.querySelector('.load-btn').addEventListener('click', () => {
+    initAudio();
+    soundButton();
+    if (typeof window.__loadSavedGame === 'function') {
+      window.__loadSavedGame();
+    } else {
+      alert(selectedLanguage === 'en' ? 'Save system is still loading. Try again.' : 'نظام الحفظ لم يجهز بعد. حاول مرة أخرى.');
+    }
   });
 
   card.querySelector('.settings-btn').addEventListener('click', () => {
@@ -6120,6 +6146,7 @@ setLanguage(selectedLanguage);
     try {
       const old = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}");
       const data = {
+        ...old,
         level: Math.max(old.level || 1, getStage()),
         coins: getCoins(),
         score: getScore(),
@@ -8381,36 +8408,64 @@ setLanguage(selectedLanguage);
     writeSave(data);
   }
 
+  function getFlowerSurface(targetX){
+    const list = Array.isArray(platforms) ? platforms : [];
+    let best = null;
+    let bestDistance = Infinity;
+
+    for (const p of list) {
+      if (!p || !Number.isFinite(Number(p.x)) || !Number.isFinite(Number(p.width))) continue;
+      const left = Number(p.x);
+      const right = left + Number(p.width);
+      const y = Number(p.y);
+      if (!Number.isFinite(y)) continue;
+
+      // Prefer a platform directly under the checkpoint.
+      if (targetX >= left && targetX <= right) {
+        const x = Math.max(left + 24, Math.min(right - 24, targetX));
+        return { x, y };
+      }
+
+      const distance = targetX < left ? left - targetX : targetX - right;
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        const x = Math.max(left + 24, Math.min(right - 24, targetX));
+        best = { x, y };
+      }
+    }
+
+    return best || { x: targetX, y: 550 };
+  }
+
   function makeFlowers(){
     const stage = getStage();
     const width = getWidth();
     const data = readSave();
     const saved = data.checkpoints && data.checkpoints[stage] ? data.checkpoints[stage] : {};
 
-    flowers = CHECKPOINTS.map((fraction, index) => ({
-      fraction,
-      index,
-      x: Math.floor(width * fraction),
-      collected: !!saved[checkpointNames[index]],
-      pulse: Math.random() * Math.PI * 2
-    }));
+    flowers = CHECKPOINTS.map((fraction, index) => {
+      const targetX = Math.floor(width * fraction);
+      const surface = getFlowerSurface(targetX);
+
+      return {
+        fraction,
+        index,
+        x: surface.x,
+        y: surface.y,
+        collected: !!saved[checkpointNames[index]],
+        pulse: Math.random() * Math.PI * 2
+      };
+    });
 
     lastCheckpointLevel = stage;
-  }
-
-  function flowerGroundY(){
-    // The game world uses a fixed ground line around y=550.
-    // Keeping checkpoints anchored to the world prevents the flower from
-    // moving up/down with the player while jumping.
-    return 550;
   }
 
   function drawFlower(f){
     if (typeof ctx === "undefined" || typeof cameraX === "undefined") return;
     const sx = f.x - cameraX;
-    if (sx < -80 || sx > canvas.width + 80) return;
+    if (sx < -90 || sx > canvas.width + 90) return;
 
-    const y = flowerGroundY();
+    const y = Number(f.y || 550);
     const t = Date.now() / 240 + f.pulse;
     const bob = Math.sin(t) * 4;
 
@@ -8456,7 +8511,7 @@ setLanguage(selectedLanguage);
     ctx.arc(0, -12, 6, 0, Math.PI * 2);
     ctx.fill();
 
-    // Small save/check mark after collection
+    // Save/check mark after collection
     if (f.collected) {
       ctx.fillStyle = "#ffffff";
       ctx.strokeStyle = "#148a3a";
@@ -8490,7 +8545,7 @@ setLanguage(selectedLanguage);
 
     flowers.forEach(f => {
       if (f.collected) return;
-      if (Math.abs(px - f.x) < 52 && Math.abs(py - flowerGroundY()) < 90) {
+      if (Math.abs(px - f.x) < 58 && Math.abs(py - Number(f.y || 550)) < 95) {
         f.collected = true;
         saveCheckpoint(f.fraction, f.index);
         playTone(880, 0.10, "sine", 0.10, 220);
@@ -8560,36 +8615,12 @@ setLanguage(selectedLanguage);
     }, 80);
   }
 
+  // Load Game is now created directly by the core start menu above.
+  // Keep this hook only for compatibility with older cached versions.
   function installLoadButton(){
-    if (typeof startMenu === "undefined" || !startMenu) return;
-    const card = startMenu.firstElementChild;
-    if (!card || card.querySelector(".load-btn")) return;
-
-    const play = card.querySelector(".play-btn");
-    if (!play) return;
-
-    const btn = document.createElement("button");
-    btn.className = "load-btn";
-    btn.style.cssText = `
-      display:block;width:100%;margin-top:18px;padding:17px 20px;
-      border:0;border-radius:16px;background:#2980b9;color:#fff;
-      font-size:24px;font-weight:800;cursor:pointer;
-      box-shadow:0 8px 0 #1b4f72;
-    `;
-    btn.textContent = lang() === "en" ? "💾 Load Game" : "💾 تحميل الحفظ";
-    play.insertAdjacentElement("afterend", btn);
-    btn.addEventListener("click", () => {
-      initAudio();
-      soundButton();
-      loadSavedGame();
-      if (typeof startMenu !== "undefined" && startMenu) startMenu.remove();
-      if (typeof settingsPanel !== "undefined" && settingsPanel) settingsPanel.remove();
-      startMenu = null;
-      settingsPanel = null;
-    });
+    const btn = document.querySelector("#gameStartMenu .load-btn");
+    if (btn) btn.textContent = lang() === "en" ? "💾 Load Game" : "💾 تحميل الحفظ";
   }
-
-  // Add the Load Game button after the existing start screen is created.
   setTimeout(installLoadButton, 300);
 
   // Keep the button translated when the language changes.
@@ -8654,6 +8685,12 @@ setLanguage(selectedLanguage);
     wrappedLoad.__checkpointLevelWrapped = true;
     window.loadLevel = wrappedLoad;
   }
+
+  // Expose the stable integration points used by the original game loop/menu.
+  window.__updateCheckpointFlowers = updateFlowers;
+  window.__drawCheckpointFlowers = drawFlowersAfterGame;
+  window.__saveLevelComplete = saveLevelComplete;
+  window.__loadSavedGame = loadSavedGame;
 
   setTimeout(makeFlowers, 400);
 })();
