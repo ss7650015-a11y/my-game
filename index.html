@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#75d5ff">
+  <title>Naughty Boy Adventure</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    html, body { width:100%; min-height:100%; margin:0; padding:0; background:#111; }
+    body { overscroll-behavior:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+    canvas { touch-action:none; }
+  </style>
+</head>
+<body>
+  <div id="gameWrapper" class="reference-platformer" data-visual-style="reference-cartoon">
+    <canvas id="gameCanvas" aria-label="Naughty Boy Adventure game"></canvas>
+    <div id="visualStyleBadge" aria-hidden="true"></div>
+
+    <div id="hud" aria-live="polite">
+      <div>⭐ <span id="scoreLabel">النقاط</span>: <span id="score">0</span></div>
+      <div>💰 <span id="coinsLabel">العملات</span>: <span id="coins">0</span></div>
+      <div>❤️ <span id="livesLabel">الأرواح</span>: <span id="lives">3</span></div>
+      <div>🏁 <span id="levelLabel">المرحلة</span>: <span id="level">1 / 15</span></div>
+      <div>🔫 <span id="laserLabel">طلقات الليزر</span>: <span id="laserAmmo">0</span>/5</div>
+    </div>
+
+    <div id="controls">
+      <div id="moveControl">← → للحركة</div>
+      <div id="jumpControl">SPACE / ↑ للقفز</div>
+      <div id="laserControl">F / X لإطلاق الليزر</div>
+    </div>
+
+    <div id="message" class="hidden">
+      <div id="messageBox">
+        <div id="messageIcon">💀</div>
+        <h1 id="messageTitle">انتهت اللعبة!</h1>
+        <p id="messageText">حاول مرة أخرى</p>
+        <button id="restartButton">🔄 إعادة المرحلة</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js" defer></script>
+</body>
+</html>
