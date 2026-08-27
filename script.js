@@ -50,7 +50,7 @@ window.addEventListener("resize", resizeCanvas);
 // GAME VARIABLES
 // ============================================================
 
-const TOTAL_LEVELS = 15;
+const TOTAL_LEVELS = 30;
 
 let score = 0;
 let coins = 0;
@@ -90,7 +90,7 @@ let audioContext = null;
 
 let masterGain = null;
 
-const soundEnabled = true;
+let soundEnabled = true;
 
 let musicTimer = null;
 
@@ -589,191 +589,56 @@ function soundRunning() {
 // BACKGROUND MUSIC
 // ============================================================
 
-const musicTracks = [
-
-  // Level 1
-  [
-    262,
-    330,
-    392,
-    330,
-    294,
-    349,
-    440,
-    349
-  ],
-
-  // Level 2
-  [
-    294,
-    370,
-    440,
-    494,
-    440,
-    370,
-    330,
-    294
-  ],
-
-  // Level 3
-  [
-    220,
-    262,
-    330,
-    392,
-    330,
-    262,
-    220,
-    196
-  ],
-
-  // Level 4
-  [
-    330,
-    392,
-    494,
-    587,
-    494,
-    392,
-    330,
-    294
-  ],
-
-  // Level 5
-  [
-    294,
-    349,
-    440,
-    523,
-    440,
-    349,
-    294,
-    262
-  ],
-
-  // Level 6
-  [
-    196,
-    233,
-    294,
-    349,
-    294,
-    233,
-    196,
-    175
-  ],
-
-  // Level 7
-  [
-    147,
-    175,
-    220,
-    262,
-    220,
-    175,
-    147,
-    131
-  ]
-
-];
-
+const musicTracks = Array.from({length: TOTAL_LEVELS}, (_, i) => {
+  const scales = [
+    [262,294,330,392,440,392,330,294],
+    [294,330,370,440,494,440,370,330],
+    [220,262,294,330,392,330,294,262],
+    [330,370,440,494,587,494,440,370]
+  ];
+  const base = scales[i % scales.length];
+  return base.map((n, j) => Math.round(n * (1 + ((i % 5) - 2) * 0.012) * (j % 2 ? 1 : 1)));
+});
 
 function startMusic() {
-
   stopMusic();
-
-  if (!soundEnabled) {
-    return;
-  }
-
-
+  if (!soundEnabled) return;
   initAudio();
-
-  if (!audioContext) {
-    return;
-  }
-
-
+  if (!audioContext) return;
   musicStep = 0;
 
-
-  musicTimer =
-    setInterval(() => {
-
-      if (
-        !gameRunning ||
-        gameOver ||
-        gameWon
-      ) {
-        return;
-      }
-
-
-      const track =
-        musicTracks[
-          (currentLevel - 1) % musicTracks.length
-        ];
-
-
-      const note =
-        track[
-          musicStep %
-          track.length
-        ];
-
-
-      playTone(
-        note,
-        0.11,
-        "triangle",
-        0.018,
-        0
-      );
-
-
-      musicStep++;
-
-    }, 230);
+  musicTimer = setInterval(() => {
+    if (!gameRunning || gameOver || gameWon) return;
+    const track = musicTracks[(currentLevel - 1) % musicTracks.length];
+    const note = track[musicStep % track.length];
+    playTone(note, 0.24, "sine", 0.028, 0);
+    if (musicStep % 2 === 0) {
+      playTone(Math.max(55, Math.round(note / 2)), 0.32, "triangle", 0.012, 0);
+    }
+    if (musicStep % 4 === 0) {
+      playTone(Math.max(65, Math.round(note * 1.5)), 0.16, "sine", 0.009, 0);
+    }
+    musicStep++;
+  }, 320);
 }
 
-
 function stopMusic() {
-
-  if (
-    musicTimer !== null
-  ) {
-
-    clearInterval(
-      musicTimer
-    );
-
+  if (musicTimer !== null) {
+    clearInterval(musicTimer);
     musicTimer = null;
   }
 }
 
-
 function toggleSound() {
-
-  soundEnabled =
-    !soundEnabled;
-
-
+  soundEnabled = !soundEnabled;
   if (soundEnabled) {
-
     initAudio();
-
     setMasterVolume(0.16);
-
     startMusic();
-
   } else {
-
     setMasterVolume(0);
-
     stopMusic();
   }
-
-
   updateSoundButton();
 }
 
@@ -918,7 +783,7 @@ function updateSoundButton() {
 }
 
 
-// Sound is always enabled; no mute/sound button is created.
+createSoundButton();
 
 
 // ============================================================
@@ -1137,7 +1002,22 @@ const worlds = [
   { name: "سهول العقارب", theme: "desertNight", sky1: "#291d3d", sky2: "#c16b65" },
   { name: "غابة الأشواك", theme: "thorn", sky1: "#173b2d", sky2: "#7fbf78" },
   { name: "بحيرة الوحوش", theme: "monsterLake", sky1: "#173d57", sky2: "#6db3c7" },
-  { name: "قلعة النهاية", theme: "final", sky1: "#090b18", sky2: "#6f304a" }
+  { name: "قلعة النهاية", theme: "final", sky1: "#090b18", sky2: "#6f304a" },
+  { name: "وادي الربيع", theme: "grass", sky1: "#70d8ff", sky2: "#f4fff1" },
+  { name: "خليج المرجان", theme: "ocean", sky1: "#35b8d8", sky2: "#e1fbff" },
+  { name: "غابة الضباب", theme: "forest", sky1: "#277a63", sky2: "#b9d9c0" },
+  { name: "صحراء الذهب", theme: "desert", sky1: "#e7a13f", sky2: "#fff0ba" },
+  { name: "قمم الثلج", theme: "ice", sky1: "#65aee0", sky2: "#f4ffff" },
+  { name: "حمم الجبل", theme: "volcano", sky1: "#2a1320", sky2: "#ff7847" },
+  { name: "قصر القمر", theme: "castle", sky1: "#10132c", sky2: "#75649b" },
+  { name: "مستنقع الضباب", theme: "swamp", sky1: "#12372e", sky2: "#6ea46a" },
+  { name: "كهف البلورات", theme: "cave", sky1: "#0b1020", sky2: "#59658e" },
+  { name: "سماء الرعد", theme: "storm", sky1: "#202a46", sky2: "#a9b6d1" },
+  { name: "ميناء القراصنة", theme: "pirate", sky1: "#167da5", sky2: "#e2f7ff" },
+  { name: "ليلة العقارب", theme: "desertNight", sky1: "#211733", sky2: "#b95e62" },
+  { name: "غابة اللبلاب", theme: "thorn", sky1: "#123327", sky2: "#86c982" },
+  { name: "بحيرة القمر", theme: "monsterLake", sky1: "#12344b", sky2: "#75c0cf" },
+  { name: "عرش التنين", theme: "final", sky1: "#070914", sky2: "#82415b" }
 
 ];
 
@@ -1155,16 +1035,15 @@ function createLevel(number) {
     return seed / 4294967296;
   };
 
-  // Difficulty: exactly 40% on level 1 -> 100% on level 15.
+  // Difficulty: exactly 40% on level 1 -> 100% on level 30.
   const difficulty =
-    0.40 + (number - 1) * (0.60 / 14);
+    0.40 + (number - 1) * (0.60 / 29);
 
-  // Very long stages: calibrated for roughly 3 minutes of smooth running.
-  // Run speed is 7.5 px/frame, so 81,000 px is about 180 seconds at 60 FPS.
-  // A small increase per stage keeps later stages slightly longer while
-  // difficulty also increases from 40% to 100%.
+  // Stages are calibrated for roughly 1 minute of running.
+  // Run speed is 7.5 px/frame, so ~30,000 px is about 67 seconds at 60 FPS.
+  // Platforming, jumps and hazards bring the practical time close to one minute.
   const width =
-    81000 + (number - 1) * 250;
+    30000 + (number - 1) * 120;
 
   const gap =
     Math.max(72, 155 - difficulty * 65);
@@ -1404,7 +1283,7 @@ function updateHUD() {
 
   if (levelElement)
     levelElement.textContent =
-      currentLevel + " / 15";
+      currentLevel + " / 30";
 }
 
 
@@ -2197,7 +2076,7 @@ function nextLevel() {
 
 
     messageText.textContent =
-      "لقد أنهيت جميع المراحل الـ15!";
+      "لقد أنهيت جميع المراحل الـ30!";
 
 
     restartButton.textContent =
@@ -2217,11 +2096,6 @@ function nextLevel() {
 
 
   currentLevel++;
-
-  // كل مرحلة جديدة تبدأ دائمًا بـ 3 أرواح مستقلة عن المرحلة السابقة.
-  lives = 3;
-  updateHUD();
-
 
 
   loadLevel(
@@ -2387,6 +2261,7 @@ function restartGame() {
 
   initAudio();
 
+  soundButton();
 
 
   stopGame();
@@ -5090,7 +4965,7 @@ let smartStageCompleted = false;
 let smartStageStartTimeSafe = Date.now();
 
 function smartDifficulty() {
-  return 0.40 + ((currentLevel - 1) / 14) * 0.60;
+  return 0.40 + ((currentLevel - 1) / 29) * 0.60;
 }
 function smartRect(a){return{x:a.x,y:a.y,width:a.w,height:a.h};}
 function smartHit(a,b){return intersects(smartRect(a),smartRect(b));}
@@ -5101,7 +4976,7 @@ function smartResetStage(){
   smartEnemies=[]; smartProjectiles=[]; smartObstacles=[];
   smartStageCoinsStart=coins; smartStageLivesStart=lives;
   smartStageCompleted=false; smartStageStartTimeSafe=Date.now();
-  const w=currentLevelWidth||81000, d=smartDifficulty();
+  const w=currentLevelWidth||30000, d=smartDifficulty();
   const step=Math.max(4000,w*.11);
   for(let i=0;i<2+Math.floor(d*5);i++){
     smartEnemies.push({type:i%5,x:5200+i*step,y:485,w:46,h:48,vx:0,vy:0,
@@ -5463,7 +5338,7 @@ function initStartScreen() {
     <button class="play-btn" style="display:block;width:100%;padding:17px 20px;border:0;border-radius:16px;background:#27ae60;color:#fff;font-size:24px;font-weight:800;cursor:pointer;box-shadow:0 8px 0 #176b3a">${menuText[selectedLanguage].play}</button>
     <button class="settings-btn" style="display:block;width:100%;margin-top:18px;padding:17px 20px;border:0;border-radius:16px;background:#27ae60;color:#fff;font-size:24px;font-weight:800;cursor:pointer;box-shadow:0 8px 0 #176b3a">${menuText[selectedLanguage].settings}</button>
     <button class="exit-btn" style="display:block;width:100%;margin-top:18px;padding:17px 20px;border:0;border-radius:16px;background:#c0392b;color:#fff;font-size:24px;font-weight:800;cursor:pointer;box-shadow:0 8px 0 #7f241b">${menuText[selectedLanguage].exit}</button>
-    <div style="margin-top:18px;font-size:13px;opacity:.75">15 مراحل • 7 حيوانات • 3 أرواح</div>
+    <div style="margin-top:18px;font-size:13px;opacity:.75">30 مراحل • 7 حيوانات • 3 أرواح</div>
     <div style="margin-top:8px;font-size:12px;opacity:.6">الصعوبة تبدأ من 40% وتصل إلى 100%</div>
   `;
 
@@ -5578,7 +5453,7 @@ setLanguage(selectedLanguage);
 
   function applyLevelText() {
     if (typeof levelElement !== "undefined" && levelElement) {
-      levelElement.textContent = currentLevel + " / 15";
+      levelElement.textContent = currentLevel + " / 30";
     }
     cleanLevelLabel(document.body);
   }
@@ -5866,10 +5741,9 @@ setLanguage(selectedLanguage);
 
     addonMainMenuButton.style.cssText = `
       position:fixed;
-      right:14px;
-      top:14px;
-      bottom:auto;
-      z-index:10020;
+      right:12px;
+      bottom:12px;
+      z-index:9998;
       padding:8px 12px;
       border:0;
       border-radius:11px;
@@ -6103,7 +5977,7 @@ setLanguage(selectedLanguage);
   }
 
   function getStage() {
-    return Math.max(1, Math.min(15, Number(
+    return Math.max(1, Math.min(30, Number(
       typeof currentLevel !== "undefined" ? currentLevel : 1
     ) || 1));
   }
@@ -6117,6 +5991,7 @@ setLanguage(selectedLanguage);
   }
 
   function saveProgress() {
+    if (!window.__allowStageFinishSave) return;
     try {
       const old = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}");
       const data = {
@@ -6148,7 +6023,7 @@ setLanguage(selectedLanguage);
   }
 
   function stageDifficulty() {
-    return 0.40 + ((getStage() - 1) / 14) * 0.60;
+    return 0.40 + ((getStage() - 1) / 29) * 0.60;
   }
 
   function announce(text) {
@@ -6175,7 +6050,7 @@ setLanguage(selectedLanguage);
     style.id = "expansionStyle";
     style.textContent = `
       #expansionHud {
-        position:fixed;left:12px;top:112px;z-index:9998;
+        position:fixed;left:12px;top:58px;z-index:9998;
         display:flex;gap:7px;flex-wrap:wrap;max-width:48%;
         font:700 13px system-ui,sans-serif;pointer-events:none;
       }
@@ -6211,6 +6086,7 @@ setLanguage(selectedLanguage);
     const hud = document.createElement("div");
     hud.id = "expansionHud";
     hud.innerHTML = `
+      <span id="expTimer">⏱ 01:00</span>
       <span id="expStars">⭐ 0</span>
       <span id="expShield">🛡️ 0</span>
     `;
@@ -6290,11 +6166,13 @@ setLanguage(selectedLanguage);
     addHud();
     const stage = getStage();
     const elapsed = Math.max(0, (Date.now() - expansion.stageStartTime) / 1000);
-    const remaining = Math.max(0, 180 - elapsed);
+    const remaining = Math.max(0, 60 - elapsed);
     const min = Math.floor(remaining / 60);
     const sec = Math.floor(remaining % 60);
+    const timer = document.getElementById("expTimer");
     const stars = document.getElementById("expStars");
     const shield = document.getElementById("expShield");
+    if (timer) timer.textContent = `⏱ ${String(min).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
     if (stars) stars.textContent = `⭐ ${expansion.stageStars}`;
     if (shield) shield.textContent = `🛡️ ${expansion.shield}`;
   }
@@ -6308,7 +6186,7 @@ setLanguage(selectedLanguage);
     expansion.jumpUntil = 0;
     expansion.bossDefeated = false;
 
-    const width = Number(typeof levelWidth !== "undefined" ? levelWidth : 81000) || 81000;
+    const width = Number(typeof levelWidth !== "undefined" ? levelWidth : 30000) || 30000;
     expansion.powerUp = {
       type: getStage() % 4 === 0 ? "star" :
             getStage() % 3 === 0 ? "shield" :
@@ -6325,13 +6203,13 @@ setLanguage(selectedLanguage);
     };
 
     // Bosses on stages 5, 10, 15.
-    expansion.boss = [5,10,15].includes(getStage()) ? {
+    expansion.boss = [5,10,15,20,25,30].includes(getStage()) ? {
       x: Math.floor(width * 0.91),
       y: 430,
       w: 95,
       h: 120,
-      hp: getStage() === 15 ? 12 : 7,
-      maxHp: getStage() === 15 ? 12 : 7,
+      hp: getStage() === 30 ? 12 : 7,
+      maxHp: getStage() === 30 ? 12 : 7,
       active: true
     } : null;
 
@@ -6371,7 +6249,7 @@ setLanguage(selectedLanguage);
       ctx.save();
       ctx.font = "70px sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(getStage() === 15 ? "👹" : "🐲", x + b.w/2, b.y + 75);
+      ctx.fillText(getStage() === 30 ? "👹" : "🐲", x + b.w/2, b.y + 75);
       ctx.fillStyle = "#222";
       ctx.fillRect(x, b.y - 16, b.w, 8);
       ctx.fillStyle = "#e53935";
@@ -6443,7 +6321,7 @@ setLanguage(selectedLanguage);
     // Award stage stars based on clean completion conditions.
     if (typeof levelComplete !== "undefined" && levelComplete) {
       const elapsed = (Date.now() - expansion.stageStartTime) / 1000;
-      if (elapsed <= 180) expansion.stageStars = Math.max(expansion.stageStars, 1);
+      if (elapsed <= 60) expansion.stageStars = Math.max(expansion.stageStars, 1);
       if (getCoins() - expansion.stageCoinsStart >= 20) expansion.stageStars = Math.max(expansion.stageStars, 2);
       if (expansion.boss && expansion.bossDefeated) expansion.stageStars = 3;
       saveProgress();
@@ -6543,7 +6421,7 @@ setLanguage(selectedLanguage);
   let lastLevelForAI = -1;
   let enemyHome = new WeakMap();
 
-  function diff(){ return 0.40 + ((currentLevel - 1) / 14) * 0.60; }
+  function diff(){ return 0.40 + ((currentLevel - 1) / 29) * 0.60; }
   function rect(o){ return {x:o.x,y:o.y,width:o.width||o.w,height:o.height||o.h}; }
   function hit(a,b){ return intersects(rect(a),rect(b)); }
   function playerHit(o){ return player && hit(player,o); }
@@ -6552,7 +6430,7 @@ setLanguage(selectedLanguage);
     aiProjectiles=[]; movingPlatforms=[]; movingHazards=[]; fallingRocks=[]; collapsingBridges=[];
     enemyHome = new WeakMap();
     lastLevelForAI=currentLevel;
-    const d=diff(), width=currentLevelWidth||81000;
+    const d=diff(), width=currentLevelWidth||30000;
 
     // Give every real enemy a distinct intelligence behavior.
     enemies.forEach((e,i)=>{
@@ -7553,7 +7431,7 @@ setLanguage(selectedLanguage);
   const TAU = Math.PI * 2;
 
   function themeForLevel() {
-    const n = Math.max(1, Math.min(15, Number(currentLevel) || 1));
+    const n = Math.max(1, Math.min(30, Number(currentLevel) || 1));
     return [
       "meadow", "ocean", "forest", "desert", "ice",
       "volcano", "castle", "swamp", "cave", "storm",
@@ -7673,7 +7551,7 @@ setLanguage(selectedLanguage);
   }
 
   function drawLevel3DBackground() {
-    const n = Math.max(1, Math.min(15, Number(currentLevel)||1));
+    const n = Math.max(1, Math.min(30, Number(currentLevel)||1));
     const t = performance.now()*.001;
     const scroll = cameraX;
 
@@ -7837,7 +7715,100 @@ setLanguage(selectedLanguage);
       }
     }
 
-    // --- 15 Final ---
+    // --- 15-30 unique worlds ---
+    else if (n === 15) {
+      draw3DSky("#2b1a38","#8f3d3e");
+      for(let i=-2;i<9;i++) hill(i*450-(scroll*.14%450),560,450,180+(i%2)*35,"#3a253d");
+      gradientRect(0,550,canvas.width,canvas.height-550,"#4d3b3b","#1d171a");
+      for(let i=-1;i<8;i++){ const x=i*250-(scroll*.25%250); ctx.fillStyle="rgba(255,87,44,.55)"; ctx.beginPath();ctx.arc(x,510,16+Math.sin(t+i)*4,0,TAU);ctx.fill(); }
+    }
+    else if (n === 16) {
+      draw3DSky("#ffd36b","#fff4c8");
+      for(let i=-2;i<9;i++) hill(i*430-(scroll*.10%430),560,430,250,"#d89a5b");
+      gradientRect(0,550,canvas.width,canvas.height-550,"#e7b968","#a86a35");
+      for(let i=-1;i<10;i++){ const x=i*170-(scroll*.22%170); ctx.fillStyle="#4c8f55";ctx.fillRect(x,485,9,65);ctx.beginPath();ctx.arc(x+4,475,24,0,TAU);ctx.fill(); }
+    }
+    else if (n === 17) {
+      draw3DSky("#72c8ff","#eafcff");
+      drawSun3D(860-scroll*.03,85,38,"#fff0a0");
+      for(let i=-2;i<9;i++) hill(i*390-(scroll*.12%390),560,390,210,"#7faeb0");
+      drawWater3D(505,"#42b8cf","#174f6b");
+      for(let i=-1;i<8;i++){ const x=i*240-(scroll*.24%240); ctx.fillStyle="#9ed6a2";ctx.beginPath();ctx.arc(x,500,22,Math.PI,TAU);ctx.fill(); }
+    }
+    else if (n === 18) {
+      draw3DSky("#566f9f","#d7e2f2");
+      for(let i=-2;i<9;i++) hill(i*420-(scroll*.11%420),560,420,260,"#657a9d");
+      gradientRect(0,550,canvas.width,canvas.height-550,"#7185a0","#344258");
+      for(let i=0;i<9;i++){ const x=i*210-(scroll*.20%210); ctx.fillStyle="rgba(255,255,255,.18)";ctx.beginPath();ctx.arc(x,120+(i%3)*55,45,0,TAU);ctx.fill(); }
+    }
+    else if (n === 19) {
+      draw3DSky("#79df9a","#efffd0");
+      for(let i=-2;i<9;i++) hill(i*400-(scroll*.13%400),560,400,240,"#68a66d");
+      gradientRect(0,550,canvas.width,canvas.height-550,"#6b9d4e","#3f6538");
+      for(let i=-1;i<12;i++){ const x=i*130-(scroll*.30%130); drawTree3D(x,550,.65,"#75482b","#3c8d50"); }
+    }
+    else if (n === 20) {
+      draw3DSky("#f09a72","#ffd8a6");
+      for(let i=-2;i<9;i++) hill(i*460-(scroll*.12%460),560,460,280,"#c77762");
+      gradientRect(0,550,canvas.width,canvas.height-550,"#c8895a","#6e4634");
+      for(let i=-1;i<8;i++){ const x=i*250-(scroll*.22%250); ctx.fillStyle="#7c4b31";ctx.fillRect(x,450,18,100);ctx.fillStyle="#b96b45";ctx.beginPath();ctx.arc(x+9,440,34,0,TAU);ctx.fill(); }
+    }
+    else if (n === 21) {
+      draw3DSky("#6a9be8","#eef7ff");
+      for(let i=-2;i<9;i++) hill(i*430-(scroll*.10%430),560,430,320,"#9bb9dc");
+      gradientRect(0,550,canvas.width,canvas.height-550,"#dcecf5","#8aa7bd");
+      for(let i=-1;i<9;i++){ const x=i*180-(scroll*.28%180); ctx.fillStyle="#ffffff";ctx.beginPath();ctx.arc(x,430,30,0,TAU);ctx.fill(); }
+    }
+    else if (n === 22) {
+      draw3DSky("#17354b","#7d403c");
+      gradientRect(0,550,canvas.width,canvas.height-550,"#4b2c2b","#1b1519");
+      for(let i=0;i<14;i++){ const x=i*120-(scroll*.18%120); const y=90+(i%5)*70; ctx.fillStyle="rgba(255,90,40,.35)";ctx.beginPath();ctx.arc(x,y,8+Math.sin(t*3+i)*3,0,TAU);ctx.fill(); }
+      for(let i=-1;i<8;i++){ const x=i*260-(scroll*.23%260); drawRock3D(x,500,.55,"#5d626b","#292d35"); }
+    }
+    else if (n === 23) {
+      draw3DSky("#8bb8e8","#e7f5ff");
+      drawSun3D(820-scroll*.05,95,32,"#fff3b0");
+      for(let i=-2;i<9;i++) hill(i*440-(scroll*.09%440),560,440,240,"#9dbf9a");
+      gradientRect(0,550,canvas.width,canvas.height-550,"#78a65b","#4d713f");
+      for(let i=-1;i<10;i++) drawTree3D(i*200-(scroll*.27%200),550,.55,"#74482a","#4a9a59");
+    }
+    else if (n === 24) {
+      draw3DSky("#efb04d","#ffe8aa");
+      for(let i=-2;i<9;i++) hill(i*480-(scroll*.14%480),560,480,300,"#c78a4b");
+      gradientRect(0,550,canvas.width,canvas.height-550,"#d39a4e","#8b552d");
+      for(let i=-1;i<10;i++){ const x=i*190-(scroll*.25%190); ctx.fillStyle="#8a5b32";ctx.fillRect(x,490,7,60); ctx.fillStyle="#b77a3c";ctx.beginPath();ctx.arc(x+3,482,25,0,TAU);ctx.fill(); }
+    }
+    else if (n === 25) {
+      draw3DSky("#1a2946","#70518c");
+      for(let i=0;i<30;i++){ const x=(i*97-scroll*.05)%canvas.width; const y=30+(i*61)%240; ctx.fillStyle="rgba(255,255,255,.7)";ctx.fillRect(x,y,2,2); }
+      gradientRect(0,550,canvas.width,canvas.height-550,"#3f4561","#1c2030");
+      for(let i=-1;i<9;i++){ const x=i*240-(scroll*.20%240); ctx.fillStyle="#4d385b";ctx.beginPath();ctx.arc(x,500,42,0,TAU);ctx.fill(); }
+    }
+    else if (n === 26) {
+      draw3DSky("#5bbbd7","#e6fbff");
+      drawWater3D(510,"#49bfd9","#1c6681");
+      for(let i=-1;i<9;i++){ const x=i*260-(scroll*.26%260); ctx.fillStyle="#d5e6aa";ctx.beginPath();ctx.arc(x,495,20,Math.PI,TAU);ctx.fill(); }
+      for(let i=0;i<7;i++){ const x=i*210-(scroll*.18%210); ctx.fillStyle="rgba(255,255,255,.32)";ctx.beginPath();ctx.arc(x,170+(i%2)*80,35,0,TAU);ctx.fill(); }
+    }
+    else if (n === 27) {
+      draw3DSky("#25324a","#9b6f83");
+      for(let i=-2;i<9;i++) hill(i*430-(scroll*.15%430),560,430,250,"#5f647e");
+      gradientRect(0,550,canvas.width,canvas.height-550,"#4a4c5b","#252833");
+      for(let i=-1;i<10;i++){ const x=i*150-(scroll*.31%150); drawRock3D(x,485,.42,"#8b8e9a","#414450"); }
+    }
+    else if (n === 28) {
+      draw3DSky("#77d4b2","#efffdc");
+      for(let i=-2;i<9;i++) hill(i*410-(scroll*.11%410),560,410,230,"#77a86b");
+      gradientRect(0,550,canvas.width,canvas.height-550,"#5f934f","#405e39");
+      for(let i=-1;i<12;i++){ const x=i*125-(scroll*.34%125); poly([[x,550],[x+18,400],[x+38,550]],"#2e6242"); }
+    }
+    else if (n === 29) {
+      draw3DSky("#39445f","#d0c0a8");
+      drawSun3D(840-scroll*.03,80,34,"#ffe9a5");
+      for(let i=-2;i<9;i++) hill(i*450-(scroll*.10%450),560,450,260,"#8a837e");
+      gradientRect(0,550,canvas.width,canvas.height-550,"#80766d","#4a4645");
+      for(let i=0;i<10;i++){ const x=i*170-(scroll*.20%170); ctx.fillStyle="rgba(255,255,255,.22)";ctx.beginPath();ctx.arc(x,160+(i%4)*60,4,0,TAU);ctx.fill(); }
+    }
     else {
       draw3DSky("#2b1a38","#8f3d3e");
       for(let i=-2;i<9;i++) hill(i*450-(scroll*.14%450),560,450,180+(i%2)*35,"#3a253d");
@@ -7875,7 +7846,7 @@ setLanguage(selectedLanguage);
   }
 
   function draw3DPlatforms() {
-    const n = Math.max(1, Math.min(15, Number(currentLevel)||1));
+    const n = Math.max(1, Math.min(30, Number(currentLevel)||1));
     for (const p of platforms) {
       const x=p.x-cameraX;
       if(x+p.width< -80 || x>canvas.width+80) continue;
@@ -7938,448 +7909,73 @@ setLanguage(selectedLanguage);
   }
 
   function draw3DPlayer() {
-
-  const left =
-    player.x - cameraX;
-
-  const footY =
-    player.y + player.height;
-
-  const dir =
-    player.direction < 0
-      ? -1
-      : 1;
-
-  const run =
-    !!player.running &&
-    !!player.ground;
-
-  const tt =
-    performance.now() * 0.022;
-
-  const stride =
-    run
-      ? Math.sin(tt) * 5
-      : 0;
-
-
-  // =========================
-  // SHADOW
-  // =========================
-
-  ctx.save();
-
-  ctx.fillStyle =
-    "rgba(0,0,0,.24)";
-
-  ctx.beginPath();
-
-  ctx.ellipse(
-    left + player.width / 2,
-    footY + 1,
-    18,
-    4.5,
-    0,
-    0,
-    TAU
-  );
-
-  ctx.fill();
-
-  ctx.restore();
-
-
-  // =========================
-  // CHARACTER
-  // =========================
-
-  ctx.save();
-
-  ctx.translate(
-    left + player.width / 2,
-    footY
-  );
-
-  ctx.scale(dir, 1);
-
-
-  // =========================
-  // SHOES
-  // =========================
-
-  ctx.fillStyle =
-    "#14181c";
-
-  ctx.beginPath();
-
-  ctx.roundRect(
-    -13 - stride,
-    -8,
-    17,
-    8,
-    4
-  );
-
-  ctx.fill();
-
-  ctx.beginPath();
-
-  ctx.roundRect(
-    4 + stride,
-    -8,
-    17,
-    8,
-    4
-  );
-
-  ctx.fill();
-
-
-  // =========================
-  // LEGS
-  // =========================
-
-  const lg =
-    ctx.createLinearGradient(
-      0,
-      -37,
-      0,
-      -8
-    );
-
-  lg.addColorStop(
-    0,
-    "#4269b0"
-  );
-
-  lg.addColorStop(
-    1,
-    "#1d3768"
-  );
-
-  ctx.strokeStyle = lg;
-
-  ctx.lineWidth = 9;
-
-  ctx.lineCap = "round";
-
-  ctx.beginPath();
-
-  ctx.moveTo(
-    -5,
-    -10
-  );
-
-  ctx.lineTo(
-    -7 - stride,
-    -32
-  );
-
-  ctx.moveTo(
-    6,
-    -10
-  );
-
-  ctx.lineTo(
-    8 + stride,
-    -32
-  );
-
-  ctx.stroke();
-
-
-  // =========================
-  // BODY
-  // =========================
-
-  const bg =
-    ctx.createLinearGradient(
-      -20,
-      -78,
-      18,
-      -32
-    );
-
-  bg.addColorStop(
-    0,
-    "#ff9a4c"
-  );
-
-  bg.addColorStop(
-    .45,
-    "#ed642b"
-  );
-
-  bg.addColorStop(
-    1,
-    "#a73a21"
-  );
-
-  ctx.fillStyle = bg;
-
-  ctx.beginPath();
-
-  ctx.roundRect(
-    -17,
-    -76,
-    34,
-    43,
-    10
-  );
-
-  ctx.fill();
-
-
-  // =========================
-  // ARM
-  // =========================
-
-  const skin =
-    ctx.createLinearGradient(
-      -10,
-      -75,
-      24,
-      -35
-    );
-
-  skin.addColorStop(
-    0,
-    "#ffd4ae"
-  );
-
-  skin.addColorStop(
-    1,
-    "#b9684c"
-  );
-
-  ctx.strokeStyle = skin;
-
-  ctx.lineWidth = 8;
-
-  ctx.beginPath();
-
-  ctx.moveTo(
-    10,
-    -65
-  );
-
-  ctx.lineTo(
-    21,
-    -48
-  );
-
-  ctx.stroke();
-
-
-  // =========================
-  // NECK + HEAD
-  // =========================
-
-  ctx.fillStyle = skin;
-
-  ctx.fillRect(
-    1,
-    -87,
-    10,
-    13
-  );
-
-  ctx.beginPath();
-
-  ctx.arc(
-    6,
-    -101,
-    19,
-    0,
-    TAU
-  );
-
-  ctx.fill();
-
-
-  // =========================
-  // HAIR
-  // =========================
-
-  ctx.fillStyle =
-    "#281c18";
-
-  ctx.beginPath();
-
-  ctx.arc(
-    0,
-    -111,
-    15,
-    Math.PI,
-    TAU
-  );
-
-  ctx.fill();
-
-
-  // =========================
-  // RED CAP
-  // =========================
-
-  const cap =
-    ctx.createLinearGradient(
-      -15,
-      -126,
-      18,
-      -100
-    );
-
-  cap.addColorStop(
-    0,
-    "#ff5b52"
-  );
-
-  cap.addColorStop(
-    .45,
-    "#e72e2e"
-  );
-
-  cap.addColorStop(
-    1,
-    "#8e1717"
-  );
-
-  ctx.fillStyle = cap;
-
-  ctx.beginPath();
-
-  ctx.arc(
-    3,
-    -115,
-    17,
-    Math.PI,
-    TAU
-  );
-
-  ctx.fill();
-
-  ctx.fillRect(
-    -10,
-    -116,
-    26,
-    7
-  );
-
-  ctx.fillStyle =
-    "#a81c1c";
-
-  ctx.beginPath();
-
-  ctx.ellipse(
-    21,
-    -109,
-    13,
-    4,
-    -.1,
-    0,
-    TAU
-  );
-
-  ctx.fill();
-
-
-  // =========================
-  // EYE
-  // =========================
-
-  ctx.fillStyle =
-    "#fff";
-
-  ctx.beginPath();
-
-  ctx.arc(
-    17,
-    -101,
-    4.5,
-    0,
-    TAU
-  );
-
-  ctx.fill();
-
-  ctx.fillStyle =
-    "#111";
-
-  ctx.beginPath();
-
-  ctx.arc(
-    18,
-    -101,
-    2,
-    0,
-    TAU
-  );
-
-  ctx.fill();
-
-
-  // =========================
-  // NOSE
-  // =========================
-
-  ctx.fillStyle =
-    "#d88e6b";
-
-  poly(
-    [
-      [24, -99],
-      [31, -95],
-      [24, -93]
-    ],
-    "#d88e6b"
-  );
-
-
-  // =========================
-  // SMILE
-  // =========================
-
-  ctx.strokeStyle =
-    "#8a4939";
-
-  ctx.lineWidth = 2;
-
-  ctx.beginPath();
-
-  ctx.arc(
-    19,
-    -91,
-    5,
-    .15,
-    1.05
-  );
-
-  ctx.stroke();
-
-
-  // =========================
-  // LIGHT / 3D EFFECT
-  // =========================
-
-  ctx.strokeStyle =
-    "rgba(255,255,255,.20)";
-
-  ctx.lineWidth = 2;
-
-  ctx.beginPath();
-
-  ctx.arc(
-    6,
-    -101,
-    19,
-    Math.PI * 1.15,
-    Math.PI * 1.85
-  );
-
-  ctx.stroke();
-
-  ctx.restore();
-}
+    // IMPORTANT: use the collision box bottom as the exact foot line.
+    const left=player.x-cameraX;
+    const footY=player.y+player.height;
+    const dir=player.direction<0?-1:1;
+    const run=!!player.running && !!player.ground;
+    const tt=performance.now()*.022;
+    const stride=run?Math.sin(tt)*5:0;
+
+    // Shadow sits exactly on the platform/floor.
+    ctx.save();
+    ctx.fillStyle="rgba(0,0,0,.24)";
+    ctx.beginPath();ctx.ellipse(left+player.width/2,footY+1,18,4.5,0,0,TAU);ctx.fill();
+    ctx.restore();
+
+    // Character is drawn upward FROM footY, not from player.y.
+    ctx.save();
+    ctx.translate(left+player.width/2,footY);
+    ctx.scale(dir,1);
+
+    // shoes — their bottom is exactly footY
+    ctx.fillStyle="#14181c";
+    ctx.beginPath();ctx.roundRect(-13-stride, -8, 17, 8, 4);ctx.fill();
+    ctx.beginPath();ctx.roundRect(4+stride, -8, 17, 8, 4);ctx.fill();
+
+    // legs
+    const lg=ctx.createLinearGradient(0,-37,0,-8);
+    lg.addColorStop(0,"#4269b0");lg.addColorStop(1,"#1d3768");
+    ctx.strokeStyle=lg;ctx.lineWidth=9;ctx.lineCap="round";
+    ctx.beginPath();ctx.moveTo(-5,-10);ctx.lineTo(-7-stride,-32);ctx.moveTo(6,-10);ctx.lineTo(8+stride,-32);ctx.stroke();
+
+    // body
+    const bg=ctx.createLinearGradient(-20,-78,18,-32);
+    bg.addColorStop(0,"#ff9a4c");bg.addColorStop(.45,"#ed642b");bg.addColorStop(1,"#a73a21");
+    ctx.fillStyle=bg;ctx.beginPath();ctx.roundRect(-17,-76,34,43,10);ctx.fill();
+
+    // arm
+    const skin=ctx.createLinearGradient(-10,-75,24,-35);
+    skin.addColorStop(0,"#ffd4ae");skin.addColorStop(1,"#b9684c");
+    ctx.strokeStyle=skin;ctx.lineWidth=8;
+    ctx.beginPath();ctx.moveTo(10,-65);ctx.lineTo(21,-48);ctx.stroke();
+
+    // neck + head
+    ctx.fillStyle=skin;ctx.fillRect(1,-87,10,13);
+    ctx.beginPath();ctx.arc(6,-101,19,0,TAU);ctx.fill();
+
+    // hair
+    ctx.fillStyle="#281c18";ctx.beginPath();ctx.arc(0,-111,15,Math.PI,TAU);ctx.fill();
+
+    // red cap, volumetric
+    const cap=ctx.createLinearGradient(-15,-126,18,-100);
+    cap.addColorStop(0,"#ff5b52");cap.addColorStop(.45,"#e72e2e");cap.addColorStop(1,"#8e1717");
+    ctx.fillStyle=cap;ctx.beginPath();ctx.arc(3,-115,17,Math.PI,TAU);ctx.fill();
+    ctx.fillRect(-10,-116,26,7);
+    ctx.fillStyle="#a81c1c";ctx.beginPath();ctx.ellipse(21,-109,13,4,-.1,0,TAU);ctx.fill();
+
+    // face profile
+    ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(17,-101,4.5,0,TAU);ctx.fill();
+    ctx.fillStyle="#111";ctx.beginPath();ctx.arc(18,-101,2,0,TAU);ctx.fill();
+    ctx.fillStyle="#d88e6b";poly([[24,-99],[31,-95],[24,-93]],"#d88e6b");
+    ctx.strokeStyle="#8a4939";ctx.lineWidth=2;ctx.beginPath();ctx.arc(19,-91,5,.15,1.05);ctx.stroke();
+
+    // rim light
+    ctx.strokeStyle="rgba(255,255,255,.20)";ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(6,-101,19,Math.PI*1.15,Math.PI*1.85);ctx.stroke();
+
+    ctx.restore();
+  }
 
   function draw3DEnemies() {
     const now=performance.now()*.001;
@@ -8668,4 +8264,183 @@ setLanguage(selectedLanguage);
   window.setInterval(sync, 250);
   window.addEventListener('resize', sync);
   if (touchQuery.addEventListener) touchQuery.addEventListener('change', sync);
+})();
+/* ============================================================
+   FINISH-ONLY SAVE — SAFE ADDON
+   Saves only when a stage is completed. No checkpoint flowers.
+   ============================================================ */
+(function installFinishOnlySave(){
+  if (window.__NaughtyFinishOnlySaveInstalled) return;
+  window.__NaughtyFinishOnlySaveInstalled = true;
+
+  const SAVE_KEY = "naughtyBoySaveV6";
+  let loadButton = null;
+
+  function readSave(){
+    try { return JSON.parse(localStorage.getItem(SAVE_KEY) || "null"); }
+    catch (_) { return null; }
+  }
+  function writeSave(data){
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); return true; }
+    catch (_) { return false; }
+  }
+
+  function saveFinishedStage(){
+    const level = Math.max(1, Math.min(TOTAL_LEVELS, Number(currentLevel) || 1));
+    const old = readSave() || {};
+    const completed = Math.max(Number(old.completedLevel || 0), level);
+    const nextLevel = Math.min(TOTAL_LEVELS + 1, completed + 1);
+    writeSave({
+      completedLevel: completed,
+      level: nextLevel,
+      coins: Number(coins || 0),
+      score: Number(score || 0),
+      lives: 3,
+      timestamp: Date.now()
+    });
+  }
+
+  function updateLoadButtonText(){
+    if (!loadButton) return;
+    const en = typeof selectedLanguage !== "undefined" && selectedLanguage === "en";
+    loadButton.textContent = en ? "▶ LOAD GAME" : "▶ تحميل الحفظ";
+    const saved = readSave();
+    loadButton.style.opacity = saved && Number(saved.completedLevel || saved.level || 0) > 0 ? "1" : ".55";
+  }
+
+  function ensureLoadButton(){
+    if (!startMenu) return;
+    const card = startMenu.querySelector("div");
+    if (!card) return;
+
+    if (loadButton && !startMenu.contains(loadButton)) loadButton = null;
+    if (!loadButton){
+      loadButton = document.createElement("button");
+      loadButton.type = "button";
+      loadButton.className = "load-game-btn";
+      loadButton.style.cssText = `display:block;width:100%;margin-top:18px;padding:17px 20px;border:0;border-radius:16px;background:#27ae60;color:#fff;font-size:24px;font-weight:800;cursor:pointer;box-shadow:0 8px 0 #176b3a;`;
+      const play = card.querySelector('.play-btn');
+      if (play) play.insertAdjacentElement('afterend', loadButton);
+      else card.appendChild(loadButton);
+
+      loadButton.addEventListener('click', () => {
+        const data = readSave();
+        const completed = Number(data && data.completedLevel || 0);
+        const savedLevel = Number(data && data.level || 0);
+        if (!completed && !savedLevel){
+          if (typeof announce === "function") announce("لا يوجد حفظ بعد / No save yet");
+          return;
+        }
+
+        initAudio();
+        if (typeof soundButton === "function") soundButton();
+
+        const level = Math.max(1, Math.min(TOTAL_LEVELS, savedLevel || Math.min(TOTAL_LEVELS, completed + 1)));
+        currentLevel = level;
+        score = Number(data.score || 0);
+        coins = Number(data.coins || 0);
+        lives = 3;
+        gameOver = false;
+        gameWon = false;
+        changingLevel = false;
+        gameRunning = false;
+
+        loadLevel(level, true);
+        updateHUD();
+
+        if (startMenu) startMenu.remove();
+        startMenu = null;
+        if (settingsPanel) settingsPanel.remove();
+        settingsPanel = null;
+        startGame();
+      });
+    }
+    updateLoadButtonText();
+  }
+
+  // Save exactly when the original game advances after a successful goal.
+  const originalNextLevel = nextLevel;
+  nextLevel = function(...args){
+    window.__allowStageFinishSave = true;
+    try {
+      saveFinishedStage();
+      return originalNextLevel.apply(this, args);
+    } finally {
+      window.__allowStageFinishSave = false;
+    }
+  };
+
+  // The menu is recreated when the player presses Main Menu. Keep Load Game there.
+  const observer = new MutationObserver(() => ensureLoadButton());
+  if (document.body) observer.observe(document.body, {childList:true, subtree:true});
+  setTimeout(ensureLoadButton, 0);
+  setInterval(ensureLoadButton, 300);
+})();
+
+/* ============================================================
+   AMBIENT WORLD ANIMATION — SAFE DRAW-ONLY LAYER
+   Birds, butterflies, leaves and fireflies move independently.
+   ============================================================ */
+(function installAmbientWorldAnimation(){
+  if (window.__NaughtyAmbientWorldInstalled) return;
+  window.__NaughtyAmbientWorldInstalled = true;
+
+  function drawAmbientCreatures(){
+    if (typeof ctx === "undefined" || typeof canvas === "undefined") return;
+    const now = performance.now() * 0.001;
+    const level = Number(typeof currentLevel !== "undefined" ? currentLevel : 1);
+    const theme = currentWorld && currentWorld.theme ? currentWorld.theme : "grass";
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // Birds: visible in outdoor worlds.
+    if (!["cave","castle"].includes(theme)){
+      ctx.font = "18px sans-serif";
+      for (let i=0;i<4;i++){
+        const bx = ((i*310 + now*55*(1+i*.12)) - cameraX*.10) % (canvas.width+120) - 60;
+        const by = 80 + i*32 + Math.sin(now*1.7+i)*9;
+        ctx.fillText("🕊️", bx, by);
+      }
+    }
+
+    // Butterflies in nature worlds.
+    if (["grass","forest","swamp","thorn","ocean"].includes(theme)){
+      ctx.font = "20px sans-serif";
+      for (let i=0;i<5;i++){
+        const bx = ((i*190 - cameraX*.16 + now*28*(i%2?1:-1)) % (canvas.width+100) + canvas.width+100) % (canvas.width+100) - 50;
+        const by = 250 + (i%3)*58 + Math.sin(now*2.2+i)*18;
+        ctx.fillText("🦋", bx, by);
+      }
+    }
+
+    // Fireflies at night/cave worlds.
+    if (["cave","desertNight","castle","monsterLake","final"].includes(theme)){
+      ctx.font = "13px sans-serif";
+      for (let i=0;i<18;i++){
+        const fx = (i*83 + now*12*(i%2?1:-1) - cameraX*.05) % (canvas.width+20);
+        const fy = 120 + (i*47)%330 + Math.sin(now*1.8+i)*8;
+        ctx.globalAlpha = .45 + .35*Math.sin(now*3+i);
+        ctx.fillText("✨", fx, fy);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // Ash/sparks in volcano.
+    if (theme === "volcano"){
+      ctx.font = "14px sans-serif";
+      for (let i=0;i<12;i++){
+        const sx = (i*121 - cameraX*.08) % (canvas.width+30);
+        const sy = 150 + ((now*35 + i*41)%330);
+        ctx.fillText("🔥", sx, sy);
+      }
+    }
+    ctx.restore();
+  }
+
+  const originalDrawBackground = drawBackground;
+  drawBackground = function(){
+    originalDrawBackground.apply(this, arguments);
+    drawAmbientCreatures();
+  };
 })();
