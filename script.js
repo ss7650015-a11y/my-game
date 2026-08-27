@@ -8016,196 +8016,123 @@ setLanguage(selectedLanguage);
   }
 
   function draw3DPlayer() {
-    // Small mischievous boy. The collision box remains untouched.
-    const left = player.x - cameraX;
-    const footY = player.y + player.height;
+    const left=player.x-cameraX;
+    const footY=player.y+player.height;
+    const moving=Math.abs(player.vx)>0.35;
+    const running=!!player.running && !!player.ground && moving;
+    const moveDir=player.direction<0?-1:1;
+    // When the boy stops, he nervously looks behind him.
+    const faceDir=moving?moveDir:-moveDir;
+    const tt=performance.now()*.018;
+    const stride=running?Math.sin(tt)*4:0;
 
-    // While moving, face the direction of travel. When stopped on the ground,
-    // look over the shoulder as if something behind him is chasing him.
-    const moving = Math.abs(player.vx) > 0.12;
-    const movingDir = player.vx < -0.12 ? -1 : 1;
-    const faceDir = moving ? movingDir : (player.direction || 1);
-    const lookBack = !moving && player.ground;
-
-    const now = performance.now() * 0.001;
-    const speed = Math.min(1, Math.abs(player.vx) / player.runSpeed);
-    const running = player.running && player.ground && speed > 0.15;
-    const walking = !running && moving && player.ground;
-    const cycle = now * (running ? 13 : 8);
-    const legSwing = (running || walking) ? Math.sin(cycle) * (running ? 8 : 5) : 0;
-    const armSwing = (running || walking) ? Math.sin(cycle + Math.PI) * (running ? 7 : 4) : 0;
-    const bob = (running || walking) ? Math.abs(Math.sin(cycle)) * 1.8 : 0;
-    const scaredBob = lookBack ? Math.sin(now * 7) * 1.1 : 0;
-
-    // Footprint/dust particles are visual only and do not affect gameplay.
-    if ((running || walking) && Math.abs(player.vx) > 1.2) {
-      if (!player._lastStepFx) player._lastStepFx = 0;
-      if (now - player._lastStepFx > (running ? 0.11 : 0.18)) {
-        player._lastStepFx = now;
-        player._stepFx = player._stepFx || [];
-        player._stepFx.push({
-          x: player.x + (faceDir < 0 ? player.width + 2 : -2),
-          y: footY - 2,
-          life: 0.42,
-          side: faceDir
-        });
+    // Running footprints/dust are deliberately outside the body transform so they stay behind him.
+    if(running){
+      ctx.save();
+      const rear=left+player.width/2-faceDir*15;
+      for(let i=0;i<4;i++){
+        const age=(performance.now()*.004+i*.7)%1;
+        const px=rear-faceDir*(age*20);
+        const py=footY-2-age*10;
+        const a=(1-age)*.38;
+        ctx.fillStyle=`rgba(255,245,220,${a})`;
+        ctx.beginPath();ctx.ellipse(px,py,3+age*2,1.8+age*1.5,0,0,TAU);ctx.fill();
       }
-    }
-
-    if (player._stepFx) {
-      player._stepFx = player._stepFx.filter(p => {
-        p.life -= 1 / 60;
-        p.x -= p.side * 0.45;
-        p.y -= 0.18;
-        if (p.life <= 0) return false;
-        const a = Math.max(0, p.life / 0.42);
-        ctx.save();
-        ctx.globalAlpha = a * 0.45;
-        ctx.fillStyle = '#d9c39a';
-        ctx.beginPath();
-        ctx.ellipse(p.x - cameraX, p.y, 3.5 + (1 - a) * 3, 1.8 + (1 - a) * 2, 0, 0, TAU);
-        ctx.fill();
-        ctx.restore();
-        return true;
-      });
+      ctx.fillStyle="rgba(90,65,45,.42)";
+      ctx.beginPath();ctx.ellipse(rear-faceDir*5,footY+1,5,2,0,0,TAU);ctx.fill();
+      ctx.restore();
     }
 
     // Ground shadow.
     ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,.22)';
-    ctx.beginPath();
-    ctx.ellipse(left + player.width / 2, footY + 1, 18, 4.5, 0, 0, TAU);
-    ctx.fill();
+    ctx.fillStyle="rgba(0,0,0,.24)";
+    ctx.beginPath();ctx.ellipse(left+player.width/2,footY+1,16,4,0,0,TAU);ctx.fill();
     ctx.restore();
 
+    // Small-child proportions: compact torso, shorter legs, larger head.
     ctx.save();
-    ctx.translate(left + player.width / 2, footY - bob + scaredBob);
-    ctx.scale(faceDir, 1);
+    ctx.translate(left+player.width/2,footY);
+    ctx.scale(faceDir,1);
 
-    // Body proportions: shorter legs, rounder head, child-like silhouette.
-    const skin = ctx.createLinearGradient(-10, -78, 20, -30);
-    skin.addColorStop(0, '#ffd8b7');
-    skin.addColorStop(1, '#bd7052');
+    // Sport sneakers.
+    ctx.fillStyle="#20252b";
+    ctx.beginPath();ctx.roundRect(-12-stride,-7,15,7,4);ctx.fill();
+    ctx.beginPath();ctx.roundRect(3+stride,-7,15,7,4);ctx.fill();
+    ctx.fillStyle="#f1f1f1";
+    ctx.fillRect(-9-stride,-6,9,2);ctx.fillRect(6+stride,-6,9,2);
 
-    const shirt = ctx.createLinearGradient(-18, -78, 18, -32);
-    shirt.addColorStop(0, '#5b91d6');
-    shirt.addColorStop(.55, '#3265a9');
-    shirt.addColorStop(1, '#1f3f72');
+    // Short black trousers.
+    ctx.fillStyle="#11151a";
+    ctx.beginPath();ctx.roundRect(-13,-27,26,18,7);ctx.fill();
 
-    const shorts = ctx.createLinearGradient(0, -36, 0, -8);
-    shorts.addColorStop(0, '#394b72');
-    shorts.addColorStop(1, '#202c48');
-
-    // Shoes.
-    ctx.fillStyle = '#17191d';
-    ctx.beginPath(); ctx.roundRect(-14 - legSwing * .35, -7, 18, 8, 4); ctx.fill();
-    ctx.beginPath(); ctx.roundRect(3 + legSwing * .35, -7, 18, 8, 4); ctx.fill();
-
-    // Legs with clear running stride.
-    ctx.strokeStyle = '#315b9b';
-    ctx.lineWidth = 8;
-    ctx.lineCap = 'round';
+    // Short legs.
+    ctx.strokeStyle="#2a2d32";ctx.lineWidth=7;ctx.lineCap="round";
     ctx.beginPath();
-    ctx.moveTo(-7, -12);
-    ctx.lineTo(-9 - legSwing, -34);
-    ctx.moveTo(7, -12);
-    ctx.lineTo(9 + legSwing, -34);
+    ctx.moveTo(-6,-11);ctx.lineTo(-7-stride,-25);
+    ctx.moveTo(6,-11);ctx.lineTo(7+stride,-25);
     ctx.stroke();
 
-    // Shorts.
-    ctx.fillStyle = shorts;
-    ctx.beginPath();
-    ctx.roundRect(-16, -42, 32, 16, 6);
-    ctx.fill();
+    // Red sweater.
+    const shirt=ctx.createLinearGradient(-15,-64,16,-27);
+    shirt.addColorStop(0,"#ff5148");shirt.addColorStop(.5,"#df2929");shirt.addColorStop(1,"#941919");
+    ctx.fillStyle=shirt;
+    ctx.beginPath();ctx.roundRect(-15,-62,30,36,9);ctx.fill();
 
-    // Shirt/body.
-    ctx.fillStyle = shirt;
+    // Arms swinging while running; tense arms when scared.
+    const skin=ctx.createLinearGradient(-8,-60,15,-25);
+    skin.addColorStop(0,"#ffd7b5");skin.addColorStop(1,"#b86b50");
+    ctx.strokeStyle=skin;ctx.lineWidth=6;ctx.lineCap="round";
     ctx.beginPath();
-    ctx.roundRect(-17, -79, 34, 42, 10);
-    ctx.fill();
-
-    // Back/forward arm swings.
-    ctx.strokeStyle = skin;
-    ctx.lineWidth = 8;
-    ctx.beginPath();
-    ctx.moveTo(-12, -68);
-    ctx.lineTo(-20, -50 - armSwing);
-    ctx.moveTo(11, -67);
-    ctx.lineTo(20, -49 + armSwing);
+    if(running){
+      ctx.moveTo(-11,-53);ctx.lineTo(-18,-38+stride);
+      ctx.moveTo(11,-53);ctx.lineTo(18,-39-stride);
+    }else{
+      ctx.moveTo(-10,-51);ctx.lineTo(-17,-39);
+      ctx.moveTo(10,-51);ctx.lineTo(18,-41);
+    }
     ctx.stroke();
 
-    // Neck.
-    ctx.fillStyle = skin;
-    ctx.fillRect(-5, -91, 11, 14);
-
-    // Large child-like head.
-    ctx.beginPath();
-    ctx.arc(2, -106, 20, 0, TAU);
-    ctx.fill();
+    // Neck and oversized child head.
+    ctx.fillStyle=skin;ctx.fillRect(-4,-69,8,10);
+    ctx.beginPath();ctx.arc(1,-82,17,0,TAU);ctx.fill();
 
     // Hair.
-    ctx.fillStyle = '#2b1c18';
-    ctx.beginPath();
-    ctx.arc(-1, -116, 17, Math.PI, TAU);
-    ctx.fill();
+    ctx.fillStyle="#2a211e";
+    ctx.beginPath();ctx.arc(-3,-91,13,Math.PI,TAU);ctx.fill();
+    ctx.beginPath();ctx.arc(-12,-86,5,0,TAU);ctx.fill();
 
     // Red cap.
-    const cap = ctx.createLinearGradient(-16, -132, 18, -106);
-    cap.addColorStop(0, '#ff6258');
-    cap.addColorStop(.5, '#e52d2d');
-    cap.addColorStop(1, '#8d1717');
-    ctx.fillStyle = cap;
-    ctx.beginPath();
-    ctx.arc(1, -119, 18, Math.PI, TAU);
-    ctx.fill();
-    ctx.fillRect(-12, -120, 28, 7);
-    ctx.fillStyle = '#a71919';
-    ctx.beginPath();
-    ctx.ellipse(20, -113, 13, 4, -.08, 0, TAU);
-    ctx.fill();
+    const cap=ctx.createLinearGradient(-14,-101,15,-83);
+    cap.addColorStop(0,"#ff625a");cap.addColorStop(.5,"#e52d2d");cap.addColorStop(1,"#8f1515");
+    ctx.fillStyle=cap;
+    ctx.beginPath();ctx.arc(-1,-94,14,Math.PI,TAU);ctx.fill();
+    ctx.fillRect(-12,-94,22,6);
+    ctx.fillStyle="#a71b1b";
+    ctx.beginPath();ctx.ellipse(17,-89,10,3,-.08,0,TAU);ctx.fill();
 
-    // Face. When stopped, eyes shift backward to create the frightened look.
-    const eyeShift = lookBack ? -8 : 0;
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(15 + eyeShift, -105, 5, 0, TAU);
-    ctx.fill();
-    ctx.fillStyle = '#111';
-    ctx.beginPath();
-    ctx.arc(14 + eyeShift, -105, 2.2, 0, TAU);
-    ctx.fill();
+    // Face: normally looks where he runs; when stopped he looks behind, visibly frightened.
+    ctx.fillStyle="#fff";
+    ctx.beginPath();ctx.arc(12,-82,4,0,TAU);ctx.fill();
+    ctx.fillStyle="#111";
+    ctx.beginPath();ctx.arc(13,-82,1.8,0,TAU);ctx.fill();
+    ctx.fillStyle="#d98e6c";
+    poly([[18,-80],[24,-77],[18,-75]],"#d98e6c");
 
-    // Nose and expression.
-    ctx.fillStyle = '#d88e6b';
-    poly([[22, -103], [30, -99], [22, -97]], '#d88e6b');
-
-    ctx.strokeStyle = lookBack ? '#7f3e35' : '#8a4939';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    if (lookBack) {
-      // Small worried mouth.
-      ctx.arc(17, -93, 4.5, Math.PI + .15, TAU - .15);
-    } else {
-      ctx.arc(19, -93, 5, .15, 1.05);
-    }
-    ctx.stroke();
-
-    // A subtle worried brow when he stops.
-    if (lookBack) {
-      ctx.strokeStyle = '#6b3a32';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(8, -113);
-      ctx.lineTo(17, -115);
-      ctx.stroke();
+    if(!moving){
+      // frightened eyebrow + open mouth
+      ctx.strokeStyle="#4b2c29";ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(8,-88);ctx.lineTo(16,-90);ctx.stroke();
+      ctx.fillStyle="#7b2630";
+      ctx.beginPath();ctx.ellipse(17,-70,3.5,5,0,0,TAU);ctx.fill();
+      ctx.strokeStyle="#7b2630";ctx.beginPath();ctx.arc(14,-75,6,.15,.9);ctx.stroke();
+    }else{
+      ctx.strokeStyle="#8a4939";ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(17,-72,5,.15,1.05);ctx.stroke();
     }
 
-    ctx.strokeStyle = 'rgba(255,255,255,.22)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(2, -106, 20, Math.PI * 1.15, Math.PI * 1.82);
-    ctx.stroke();
-
+    // Soft rim light for the 3D look.
+    ctx.strokeStyle="rgba(255,255,255,.22)";ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(1,-82,17,Math.PI*1.15,Math.PI*1.8);ctx.stroke();
     ctx.restore();
   }
 
