@@ -5903,8 +5903,8 @@ setLanguage(selectedLanguage);
     addonMainMenuButton.style.cssText = `
       position:fixed;
       right:14px;
-      top:auto;
-      bottom:14px;
+      top:14px;
+      bottom:auto;
       z-index:10020;
       padding:8px 12px;
       border:0;
@@ -7126,124 +7126,188 @@ setLanguage(selectedLanguage);
     }
   };
 
-  // ---------- Player: clean side-profile ----------
+  // ---------- Player: small child, red sweater, black pants, sneakers ----------
   drawPlayer = function() {
     const x = player.x - cameraX;
     const y = player.y;
+    const w = player.width;
+    const h = player.height;
     const dir = player.direction < 0 ? -1 : 1;
-    const runBob = player.running && player.ground ? Math.sin(performance.now() * .025) * 2 : 0;
+    const moving = !!player.running && !!player.ground && Math.abs(player.vx) > 0.2;
+    const now = performance.now();
+    const phase = now * (moving ? 0.032 : 0.012);
+    const step = moving ? Math.sin(phase) : 0;
+    const bob = moving ? Math.abs(Math.sin(phase)) * 1.2 : 0;
 
+    // Clear, visible ground shadow.
     ctx.save();
-    ctx.translate(x + player.width/2, y + runBob);
-    ctx.scale(dir, 1);
-
-    // shadow
-    ctx.restore();
-    ctx.save();
-    ctx.fillStyle = "rgba(0,0,0,.20)";
+    ctx.fillStyle = 'rgba(0,0,0,.20)';
     ctx.beginPath();
-    ctx.ellipse(x + player.width/2, y + player.height + 5, 19, 5, 0, 0, Math.PI*2);
+    ctx.ellipse(x + w/2, y + h + 2, 15, 4, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
+    // Footstep dust/tracks while running.
+    if (moving) {
+      const baseX = x + w/2 - dir * 9;
+      const baseY = y + h - 2;
+      for (let i = 0; i < 3; i++) {
+        const life = ((now * 0.004 + i * 0.34) % 1);
+        const px = baseX - dir * (life * 18 + i * 3);
+        const py = baseY - life * 5;
+        const r = 2.2 - life * 1.1;
+        ctx.save();
+        ctx.globalAlpha = (1 - life) * 0.75;
+        ctx.fillStyle = '#d8c19a';
+        ctx.beginPath();
+        ctx.arc(px, py, Math.max(0.7, r), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
     ctx.save();
-    ctx.translate(x + player.width/2, y + runBob);
+    ctx.translate(x + w/2, y + bob);
     ctx.scale(dir, 1);
 
-    // legs
-    ctx.strokeStyle = "#263238";
+    // Small-child proportions: large head, short torso, short legs.
+    const headY = -13;
+    const torsoTop = 5;
+    const legTop = 29;
+    const legBottom = 43;
+    const skin = '#f0b58e';
+
+    // Legs: animated only while running.
+    const stride = moving ? step * 5 : 0;
+    ctx.strokeStyle = '#111820';
     ctx.lineWidth = 6;
-    ctx.lineCap = "round";
-    const stride = player.ground && player.running ? Math.sin(performance.now() * .035) * 5 : 0;
+    ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(-5, 27); ctx.lineTo(-7 - stride, 40);
-    ctx.moveTo(7, 27); ctx.lineTo(9 + stride, 40);
+    ctx.moveTo(-5, legTop); ctx.lineTo(-7 - stride, legBottom);
+    ctx.moveTo(6, legTop); ctx.lineTo(9 + stride, legBottom);
     ctx.stroke();
 
-    // shoes
-    ctx.strokeStyle = "#15191d";
-    ctx.lineWidth = 7;
+    // Sport sneakers with white soles.
+    function shoe(sx) {
+      ctx.fillStyle = '#20262c';
+      ctx.beginPath();
+      ctx.roundRect(sx - 7, legBottom - 2, 15, 7, 3);
+      ctx.fill();
+      ctx.fillStyle = '#f1f1f1';
+      ctx.fillRect(sx - 6, legBottom + 3, 13, 2);
+      ctx.fillStyle = '#d63b35';
+      ctx.fillRect(sx - 2, legBottom - 1, 5, 2);
+    }
+    shoe(-7 - stride);
+    shoe(9 + stride);
+
+    // Black pants.
+    ctx.fillStyle = '#111419';
     ctx.beginPath();
-    ctx.moveTo(-11 - stride, 40); ctx.lineTo(0 - stride, 40);
-    ctx.moveTo(5 + stride, 40); ctx.lineTo(15 + stride, 40);
+    ctx.roundRect(-13, 24, 26, 12, 4);
+    ctx.fill();
+
+    // Red sweater.
+    const sweater = ctx.createLinearGradient(-15, 2, 15, 31);
+    sweater.addColorStop(0, '#ff4b45');
+    sweater.addColorStop(.55, '#e52f2f');
+    sweater.addColorStop(1, '#a91e24');
+    ctx.fillStyle = sweater;
+    ctx.beginPath();
+    ctx.roundRect(-15, torsoTop, 30, 27, 7);
+    ctx.fill();
+
+    // Sweater collar.
+    ctx.fillStyle = '#8f171c';
+    ctx.beginPath();
+    ctx.arc(0, 6, 6, 0, Math.PI);
+    ctx.fill();
+
+    // Back arm and front arm; arms swing when running.
+    const armSwing = moving ? step * 4 : 0;
+    ctx.strokeStyle = skin;
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(-11, 10); ctx.lineTo(-17 - armSwing, 20);
+    ctx.moveTo(10, 10); ctx.lineTo(17 + armSwing, 20);
     ctx.stroke();
 
-    // orange shirt
-    ctx.fillStyle = "#ef6b2e";
+    // Neck.
+    ctx.fillStyle = skin;
+    ctx.fillRect(-4, -1, 8, 8);
+
+    // Child's head.
+    ctx.fillStyle = skin;
     ctx.beginPath();
-    ctx.roundRect(-17, 2, 34, 29, 8);
+    ctx.arc(2, headY, 15.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // shirt highlight
-    ctx.fillStyle = "#ff8b45";
-    ctx.fillRect(-13, 7, 8, 17);
-
-    // arm
-    ctx.strokeStyle = "#f0b48c";
-    ctx.lineWidth = 7;
+    // Ear.
+    ctx.fillStyle = '#d18d6b';
     ctx.beginPath();
-    ctx.moveTo(10, 10);
-    ctx.lineTo(20, 21);
-    ctx.stroke();
-
-    // neck
-    ctx.fillStyle = "#e3a57d";
-    ctx.fillRect(3, -5, 9, 10);
-
-    // head profile
-    ctx.fillStyle = "#f2bb91";
-    ctx.beginPath();
-    ctx.arc(7, -13, 17, 0, Math.PI * 2);
+    ctx.arc(-12, headY + 1, 4.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // ear
-    ctx.fillStyle = "#d99a70";
+    // Short dark hair.
+    ctx.fillStyle = '#2a211d';
     ctx.beginPath();
-    ctx.arc(-7, -10, 5, 0, Math.PI * 2);
+    ctx.arc(0, headY - 7, 13.5, Math.PI, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(-11, headY - 8, 22, 5);
+
+    // Red cap.
+    ctx.fillStyle = '#d9272e';
+    ctx.beginPath();
+    ctx.arc(2, headY - 11, 13.5, Math.PI, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(-9, headY - 12, 22, 5);
+    ctx.fillStyle = '#9f1820';
+    ctx.beginPath();
+    ctx.ellipse(15, headY - 7, 10, 3.2, -.08, 0, Math.PI * 2);
     ctx.fill();
 
-    // hair
-    ctx.fillStyle = "#2d201b";
+    // Face: running looks forward; idle looks back in fear.
+    const scared = !moving && player.ground;
+    const eyeX = scared ? -7 : 11;
+    const eyeY = headY - 1;
+
+    ctx.fillStyle = '#fff';
     ctx.beginPath();
-    ctx.arc(-1, -24, 13, Math.PI, Math.PI * 2);
+    ctx.arc(eyeX, eyeY, scared ? 4.5 : 3.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#171717';
+    ctx.beginPath();
+    ctx.arc(eyeX + (scared ? -1.2 : 1), eyeY, 1.9, 0, Math.PI * 2);
     ctx.fill();
 
-    // red cap with brim pointing forward
-    ctx.fillStyle = "#d92f2f";
-    ctx.beginPath();
-    ctx.arc(3, -28, 15, Math.PI, Math.PI * 2);
-    ctx.fill();
-    ctx.fillRect(-9, -28, 23, 6);
+    if (scared) {
+      // Turned-back nose and worried open mouth.
+      ctx.fillStyle = '#d18d6b';
+      ctx.beginPath();
+      ctx.moveTo(-18, headY + 1); ctx.lineTo(-24, headY + 4); ctx.lineTo(-18, headY + 6);
+      ctx.closePath();
+      ctx.fill();
 
-    ctx.fillStyle = "#b71c1c";
-    ctx.beginPath();
-    ctx.ellipse(18, -22, 12, 4, -.08, 0, Math.PI * 2);
-    ctx.fill();
+      ctx.strokeStyle = '#7b3030';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(-8, headY + 7, 4, 0, Math.PI);
+      ctx.stroke();
 
-    // single visible eye, nose and smile = clear side profile
-    ctx.fillStyle = "#fff";
-    ctx.beginPath();
-    ctx.arc(15, -14, 4.3, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#171717";
-    ctx.beginPath();
-    ctx.arc(16, -14, 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#e3a57d";
-    ctx.beginPath();
-    ctx.moveTo(22, -12);
-    ctx.lineTo(29, -9);
-    ctx.lineTo(22, -7);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.strokeStyle = "#8b4a36";
-    ctx.lineWidth = 1.7;
-    ctx.beginPath();
-    ctx.arc(18, -5, 5, .15, 1.05);
-    ctx.stroke();
+      // Sweat drop = scared reaction.
+      ctx.fillStyle = '#5eb8ff';
+      ctx.beginPath();
+      ctx.moveTo(-13, headY - 7);
+      ctx.quadraticCurveTo(-17, headY - 1, -13, headY + 1);
+      ctx.quadraticCurveTo(-9, headY - 1, -13, headY - 7);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = '#d18d6b';
+      ctx.beginPath();
+      ctx.moveTo(17, headY + 1); ctx.lineTo(23, headY + 4); ctx.lineTo(17, headY + 6);
+      ctx.closePath();
+      ctx.fill();
+    }
 
     ctx.restore();
   };
@@ -7377,112 +7441,6 @@ setLanguage(selectedLanguage);
       ctx.ellipse(x, y, 5, 3, 0, 0, Math.PI * 2);
       ctx.fill();
     }
-
-    ctx.restore();
-  };
-})();
-
-
-
-/* --- 3D-inspired character rendering --- */
-(function installCharacter3D() {
-  const oldDrawPlayer = drawPlayer;
-  drawPlayer = function() {
-    const x = player.x - cameraX;
-    // Character's feet are aligned exactly with the collision bottom.
-    const footY = player.y + player.height;
-    const dir = player.direction < 0 ? -1 : 1;
-    const moving = !!player.running && !!player.ground;
-    const t = performance.now() * 0.018;
-    const bob = moving ? Math.sin(t) * 1.5 : 0;
-
-    ctx.save();
-
-    // Ground contact shadow — makes it clear the character is standing on grass.
-    ctx.fillStyle = "rgba(0,0,0,.22)";
-    ctx.beginPath();
-    ctx.ellipse(x + player.width / 2, footY + 1, 17, 4.5, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.translate(x + player.width / 2, player.y + bob);
-    ctx.scale(dir, 1);
-
-    // legs with depth shading
-    ctx.strokeStyle = "#22272b";
-    ctx.lineWidth = 7;
-    ctx.lineCap = "round";
-    const stride = moving ? Math.sin(t * 1.8) * 4.5 : 0;
-    ctx.beginPath();
-    ctx.moveTo(-5, 27); ctx.lineTo(-7 - stride, 39);
-    ctx.moveTo(7, 27); ctx.lineTo(9 + stride, 39);
-    ctx.stroke();
-
-    ctx.strokeStyle = "#0e1215";
-    ctx.lineWidth = 7;
-    ctx.beginPath();
-    ctx.moveTo(-11 - stride, 40); ctx.lineTo(1 - stride, 40);
-    ctx.moveTo(5 + stride, 40); ctx.lineTo(16 + stride, 40);
-    ctx.stroke();
-
-    // shirt with gradient
-    const shirt = ctx.createLinearGradient(-18, 0, 18, 30);
-    shirt.addColorStop(0, "#ff9b4b");
-    shirt.addColorStop(.55, "#ed642b");
-    shirt.addColorStop(1, "#a83c20");
-    ctx.fillStyle = shirt;
-    ctx.beginPath();
-    ctx.roundRect(-17, 2, 34, 29, 8);
-    ctx.fill();
-
-    // arm
-    const skin = ctx.createLinearGradient(-5, -5, 20, 25);
-    skin.addColorStop(0, "#ffd0aa");
-    skin.addColorStop(1, "#c97955");
-    ctx.strokeStyle = skin;
-    ctx.lineWidth = 7;
-    ctx.beginPath();
-    ctx.moveTo(10, 10); ctx.lineTo(20, 21);
-    ctx.stroke();
-
-    // neck/head
-    ctx.fillStyle = skin;
-    ctx.fillRect(3, -5, 9, 10);
-    ctx.beginPath();
-    ctx.arc(7, -13, 17, 0, Math.PI * 2);
-    ctx.fill();
-
-    // hair
-    ctx.fillStyle = "#2a1d18";
-    ctx.beginPath();
-    ctx.arc(-1, -24, 13, Math.PI, Math.PI * 2);
-    ctx.fill();
-
-    // cap
-    const cap = ctx.createLinearGradient(-10, -38, 15, -20);
-    cap.addColorStop(0, "#ff4b43");
-    cap.addColorStop(.55, "#e72f2f");
-    cap.addColorStop(1, "#941c1c");
-    ctx.fillStyle = cap;
-    ctx.beginPath();
-    ctx.arc(3, -28, 15, Math.PI, Math.PI * 2);
-    ctx.fill();
-    ctx.fillRect(-9, -28, 23, 6);
-
-    ctx.fillStyle = "#a91d1d";
-    ctx.beginPath();
-    ctx.ellipse(18, -22, 12, 4, -.08, 0, Math.PI * 2);
-    ctx.fill();
-
-    // face profile
-    ctx.fillStyle = "#fff";
-    ctx.beginPath(); ctx.arc(15, -14, 4.3, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#171717";
-    ctx.beginPath(); ctx.arc(16, -14, 2, 0, Math.PI * 2); ctx.fill();
-
-    ctx.fillStyle = "#d9926c";
-    ctx.beginPath();
-    ctx.moveTo(22, -12); ctx.lineTo(29, -9); ctx.lineTo(22, -7);
-    ctx.closePath(); ctx.fill();
 
     ctx.restore();
   };
@@ -8016,195 +7974,70 @@ setLanguage(selectedLanguage);
   }
 
   function draw3DPlayer() {
-    // Small mischievous boy. The collision box remains untouched.
-    const left = player.x - cameraX;
-    const footY = player.y + player.height;
+    // IMPORTANT: use the collision box bottom as the exact foot line.
+    const left=player.x-cameraX;
+    const footY=player.y+player.height;
+    const dir=player.direction<0?-1:1;
+    const run=!!player.running && !!player.ground;
+    const tt=performance.now()*.022;
+    const stride=run?Math.sin(tt)*5:0;
 
-    // While moving, face the direction of travel. When stopped on the ground,
-    // look over the shoulder as if something behind him is chasing him.
-    const moving = Math.abs(player.vx) > 0.12;
-    const movingDir = player.vx < -0.12 ? -1 : 1;
-    const faceDir = moving ? movingDir : (player.direction || 1);
-    const lookBack = !moving && player.ground;
-
-    const now = performance.now() * 0.001;
-    const speed = Math.min(1, Math.abs(player.vx) / player.runSpeed);
-    const running = player.running && player.ground && speed > 0.15;
-    const walking = !running && moving && player.ground;
-    const cycle = now * (running ? 13 : 8);
-    const legSwing = (running || walking) ? Math.sin(cycle) * (running ? 8 : 5) : 0;
-    const armSwing = (running || walking) ? Math.sin(cycle + Math.PI) * (running ? 7 : 4) : 0;
-    const bob = (running || walking) ? Math.abs(Math.sin(cycle)) * 1.8 : 0;
-    const scaredBob = lookBack ? Math.sin(now * 7) * 1.1 : 0;
-
-    // Footprint/dust particles are visual only and do not affect gameplay.
-    if ((running || walking) && Math.abs(player.vx) > 1.2) {
-      if (!player._lastStepFx) player._lastStepFx = 0;
-      if (now - player._lastStepFx > (running ? 0.11 : 0.18)) {
-        player._lastStepFx = now;
-        player._stepFx = player._stepFx || [];
-        player._stepFx.push({
-          x: player.x + (faceDir < 0 ? player.width + 2 : -2),
-          y: footY - 2,
-          life: 0.42,
-          side: faceDir
-        });
-      }
-    }
-
-    if (player._stepFx) {
-      player._stepFx = player._stepFx.filter(p => {
-        p.life -= 1 / 60;
-        p.x -= p.side * 0.45;
-        p.y -= 0.18;
-        if (p.life <= 0) return false;
-        const a = Math.max(0, p.life / 0.42);
-        ctx.save();
-        ctx.globalAlpha = a * 0.45;
-        ctx.fillStyle = '#d9c39a';
-        ctx.beginPath();
-        ctx.ellipse(p.x - cameraX, p.y, 3.5 + (1 - a) * 3, 1.8 + (1 - a) * 2, 0, 0, TAU);
-        ctx.fill();
-        ctx.restore();
-        return true;
-      });
-    }
-
-    // Ground shadow.
+    // Shadow sits exactly on the platform/floor.
     ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,.22)';
-    ctx.beginPath();
-    ctx.ellipse(left + player.width / 2, footY + 1, 18, 4.5, 0, 0, TAU);
-    ctx.fill();
+    ctx.fillStyle="rgba(0,0,0,.24)";
+    ctx.beginPath();ctx.ellipse(left+player.width/2,footY+1,18,4.5,0,0,TAU);ctx.fill();
     ctx.restore();
 
+    // Character is drawn upward FROM footY, not from player.y.
     ctx.save();
-    ctx.translate(left + player.width / 2, footY - bob + scaredBob);
-    ctx.scale(faceDir, 1);
+    ctx.translate(left+player.width/2,footY);
+    ctx.scale(dir,1);
 
-    // Body proportions: shorter legs, rounder head, child-like silhouette.
-    const skin = ctx.createLinearGradient(-10, -78, 20, -30);
-    skin.addColorStop(0, '#ffd8b7');
-    skin.addColorStop(1, '#bd7052');
+    // shoes — their bottom is exactly footY
+    ctx.fillStyle="#14181c";
+    ctx.beginPath();ctx.roundRect(-13-stride, -8, 17, 8, 4);ctx.fill();
+    ctx.beginPath();ctx.roundRect(4+stride, -8, 17, 8, 4);ctx.fill();
 
-    const shirt = ctx.createLinearGradient(-18, -78, 18, -32);
-    shirt.addColorStop(0, '#5b91d6');
-    shirt.addColorStop(.55, '#3265a9');
-    shirt.addColorStop(1, '#1f3f72');
+    // legs
+    const lg=ctx.createLinearGradient(0,-37,0,-8);
+    lg.addColorStop(0,"#4269b0");lg.addColorStop(1,"#1d3768");
+    ctx.strokeStyle=lg;ctx.lineWidth=9;ctx.lineCap="round";
+    ctx.beginPath();ctx.moveTo(-5,-10);ctx.lineTo(-7-stride,-32);ctx.moveTo(6,-10);ctx.lineTo(8+stride,-32);ctx.stroke();
 
-    const shorts = ctx.createLinearGradient(0, -36, 0, -8);
-    shorts.addColorStop(0, '#394b72');
-    shorts.addColorStop(1, '#202c48');
+    // body
+    const bg=ctx.createLinearGradient(-20,-78,18,-32);
+    bg.addColorStop(0,"#ff9a4c");bg.addColorStop(.45,"#ed642b");bg.addColorStop(1,"#a73a21");
+    ctx.fillStyle=bg;ctx.beginPath();ctx.roundRect(-17,-76,34,43,10);ctx.fill();
 
-    // Shoes.
-    ctx.fillStyle = '#17191d';
-    ctx.beginPath(); ctx.roundRect(-14 - legSwing * .35, -7, 18, 8, 4); ctx.fill();
-    ctx.beginPath(); ctx.roundRect(3 + legSwing * .35, -7, 18, 8, 4); ctx.fill();
+    // arm
+    const skin=ctx.createLinearGradient(-10,-75,24,-35);
+    skin.addColorStop(0,"#ffd4ae");skin.addColorStop(1,"#b9684c");
+    ctx.strokeStyle=skin;ctx.lineWidth=8;
+    ctx.beginPath();ctx.moveTo(10,-65);ctx.lineTo(21,-48);ctx.stroke();
 
-    // Legs with clear running stride.
-    ctx.strokeStyle = '#315b9b';
-    ctx.lineWidth = 8;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(-7, -12);
-    ctx.lineTo(-9 - legSwing, -34);
-    ctx.moveTo(7, -12);
-    ctx.lineTo(9 + legSwing, -34);
-    ctx.stroke();
+    // neck + head
+    ctx.fillStyle=skin;ctx.fillRect(1,-87,10,13);
+    ctx.beginPath();ctx.arc(6,-101,19,0,TAU);ctx.fill();
 
-    // Shorts.
-    ctx.fillStyle = shorts;
-    ctx.beginPath();
-    ctx.roundRect(-16, -42, 32, 16, 6);
-    ctx.fill();
+    // hair
+    ctx.fillStyle="#281c18";ctx.beginPath();ctx.arc(0,-111,15,Math.PI,TAU);ctx.fill();
 
-    // Shirt/body.
-    ctx.fillStyle = shirt;
-    ctx.beginPath();
-    ctx.roundRect(-17, -79, 34, 42, 10);
-    ctx.fill();
+    // red cap, volumetric
+    const cap=ctx.createLinearGradient(-15,-126,18,-100);
+    cap.addColorStop(0,"#ff5b52");cap.addColorStop(.45,"#e72e2e");cap.addColorStop(1,"#8e1717");
+    ctx.fillStyle=cap;ctx.beginPath();ctx.arc(3,-115,17,Math.PI,TAU);ctx.fill();
+    ctx.fillRect(-10,-116,26,7);
+    ctx.fillStyle="#a81c1c";ctx.beginPath();ctx.ellipse(21,-109,13,4,-.1,0,TAU);ctx.fill();
 
-    // Back/forward arm swings.
-    ctx.strokeStyle = skin;
-    ctx.lineWidth = 8;
-    ctx.beginPath();
-    ctx.moveTo(-12, -68);
-    ctx.lineTo(-20, -50 - armSwing);
-    ctx.moveTo(11, -67);
-    ctx.lineTo(20, -49 + armSwing);
-    ctx.stroke();
+    // face profile
+    ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(17,-101,4.5,0,TAU);ctx.fill();
+    ctx.fillStyle="#111";ctx.beginPath();ctx.arc(18,-101,2,0,TAU);ctx.fill();
+    ctx.fillStyle="#d88e6b";poly([[24,-99],[31,-95],[24,-93]],"#d88e6b");
+    ctx.strokeStyle="#8a4939";ctx.lineWidth=2;ctx.beginPath();ctx.arc(19,-91,5,.15,1.05);ctx.stroke();
 
-    // Neck.
-    ctx.fillStyle = skin;
-    ctx.fillRect(-5, -91, 11, 14);
-
-    // Large child-like head.
-    ctx.beginPath();
-    ctx.arc(2, -106, 20, 0, TAU);
-    ctx.fill();
-
-    // Hair.
-    ctx.fillStyle = '#2b1c18';
-    ctx.beginPath();
-    ctx.arc(-1, -116, 17, Math.PI, TAU);
-    ctx.fill();
-
-    // Red cap.
-    const cap = ctx.createLinearGradient(-16, -132, 18, -106);
-    cap.addColorStop(0, '#ff6258');
-    cap.addColorStop(.5, '#e52d2d');
-    cap.addColorStop(1, '#8d1717');
-    ctx.fillStyle = cap;
-    ctx.beginPath();
-    ctx.arc(1, -119, 18, Math.PI, TAU);
-    ctx.fill();
-    ctx.fillRect(-12, -120, 28, 7);
-    ctx.fillStyle = '#a71919';
-    ctx.beginPath();
-    ctx.ellipse(20, -113, 13, 4, -.08, 0, TAU);
-    ctx.fill();
-
-    // Face. When stopped, eyes shift backward to create the frightened look.
-    const eyeShift = lookBack ? -8 : 0;
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(15 + eyeShift, -105, 5, 0, TAU);
-    ctx.fill();
-    ctx.fillStyle = '#111';
-    ctx.beginPath();
-    ctx.arc(14 + eyeShift, -105, 2.2, 0, TAU);
-    ctx.fill();
-
-    // Nose and expression.
-    ctx.fillStyle = '#d88e6b';
-    poly([[22, -103], [30, -99], [22, -97]], '#d88e6b');
-
-    ctx.strokeStyle = lookBack ? '#7f3e35' : '#8a4939';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    if (lookBack) {
-      // Small worried mouth.
-      ctx.arc(17, -93, 4.5, Math.PI + .15, TAU - .15);
-    } else {
-      ctx.arc(19, -93, 5, .15, 1.05);
-    }
-    ctx.stroke();
-
-    // A subtle worried brow when he stops.
-    if (lookBack) {
-      ctx.strokeStyle = '#6b3a32';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(8, -113);
-      ctx.lineTo(17, -115);
-      ctx.stroke();
-    }
-
-    ctx.strokeStyle = 'rgba(255,255,255,.22)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(2, -106, 20, Math.PI * 1.15, Math.PI * 1.82);
-    ctx.stroke();
+    // rim light
+    ctx.strokeStyle="rgba(255,255,255,.20)";ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(6,-101,19,Math.PI*1.15,Math.PI*1.85);ctx.stroke();
 
     ctx.restore();
   }
