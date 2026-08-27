@@ -1014,6 +1014,12 @@ const player = {
 };
 
 
+// Supplied player PNG: loaded once and reused by drawPlayer().
+window.playerCharacterImage = new Image();
+window.playerCharacterImage.decoding = "async";
+window.playerCharacterImage.src = "boy-character.png";
+
+
 // ============================================================
 // WORLD DATA
 // ============================================================
@@ -4791,160 +4797,74 @@ function drawPlayer() {
 
   const x = player.x - cameraX;
   const y = player.y;
-  const t = performance.now() * 0.012;
+  const now = performance.now();
   const moving = Math.abs(player.vx) > 0.2;
-  const step = moving
-    ? Math.sin(t * (player.running ? 1.7 : 1.0)) * 4
-    : 0;
-  const bob = moving
-    ? Math.abs(Math.sin(t * (player.running ? 1.7 : 1.0))) * 1.3
-    : 0;
+  const runningFast = player.running && Math.abs(player.vx) > 2;
+  const bob = moving ? Math.abs(Math.sin(now * 0.012 * (player.running ? 1.7 : 1.0))) * 1.2 : 0;
+
+  // The supplied PNG is the actual player artwork. Keep the game's
+  // existing collision box and movement logic unchanged.
+  const img = window.playerCharacterImage;
 
   ctx.save();
-  ctx.translate(x + player.width / 2, y + bob);
-  ctx.scale(player.direction || 1, 1);
-  ctx.translate(-player.width / 2, 0);
 
-  // Shadow
-  ctx.fillStyle = 'rgba(0,0,0,.22)';
+  // Ground shadow stays under the character.
+  ctx.fillStyle = 'rgba(0,0,0,.24)';
   ctx.beginPath();
-  ctx.ellipse(21, 59, player.running ? 27 : 23, 6, 0, 0, Math.PI * 2);
+  ctx.ellipse(x + player.width / 2, y + player.height - 1, 22, 5, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Back leg
-  ctx.strokeStyle = '#253b73';
-  ctx.lineWidth = 9;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(22, 43);
-  ctx.lineTo(17 - step * 0.7, 54);
-  ctx.stroke();
-
-  // Front leg
-  ctx.beginPath();
-  ctx.moveTo(27, 43);
-  ctx.lineTo(31 + step * 0.7, 54);
-  ctx.stroke();
-
-  // Shoes pointing forward
-  ctx.fillStyle = '#242424';
-  ctx.beginPath();
-  ctx.roundRect(11 - step * 0.7, 51, 18, 8, 4);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.roundRect(27 + step * 0.7, 51, 18, 8, 4);
-  ctx.fill();
-
-  // Hoodie / shirt body
-  ctx.fillStyle = player.running ? '#e85d2a' : '#ef6a2f';
-  ctx.beginPath();
-  ctx.roundRect(7, 22, 28, 24, 8);
-  ctx.fill();
-
-  // Hoodie pocket
-  ctx.fillStyle = '#d94e25';
-  ctx.beginPath();
-  ctx.roundRect(14, 35, 17, 8, 4);
-  ctx.fill();
-
-  // Back arm
-  ctx.strokeStyle = '#d95429';
-  ctx.lineWidth = 8;
-  ctx.beginPath();
-  ctx.moveTo(10, 27);
-  ctx.lineTo(5, 39 - step);
-  ctx.stroke();
-
-  // Front arm swinging forward
-  ctx.strokeStyle = '#ef6a2f';
-  ctx.beginPath();
-  ctx.moveTo(32, 27);
-  ctx.lineTo(40, 36 + step);
-  ctx.stroke();
-
-  // Hands
-  ctx.fillStyle = '#f2b58d';
-  ctx.beginPath();
-  ctx.arc(5, 40 - step, 5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(40, 37 + step, 5, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Neck
-  ctx.fillStyle = '#d99068';
-  ctx.fillRect(22, 17, 8, 8);
-
-  // Side-profile head: nose projects forward, one eye visible.
-  ctx.fillStyle = '#f2b58d';
-  ctx.beginPath();
-  ctx.ellipse(23, 13, 15, 16, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Back ear
-  ctx.beginPath();
-  ctx.arc(9, 15, 4, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Nose pointing in movement direction
-  ctx.beginPath();
-  ctx.moveTo(34, 17);
-  ctx.quadraticCurveTo(43, 20, 34, 23);
-  ctx.closePath();
-  ctx.fill();
-
-  // Hair visible under cap
-  ctx.fillStyle = '#2b1b16';
-  ctx.beginPath();
-  ctx.arc(21, 6, 13, Math.PI, Math.PI * 2);
-  ctx.fill();
-
-  // Naughty cap with visor pointing forward
-  ctx.fillStyle = '#d32f2f';
-  ctx.beginPath();
-  ctx.arc(21, 2, 13, Math.PI, Math.PI * 2);
-  ctx.fill();
-  ctx.fillRect(9, 1, 24, 5);
-  ctx.fillStyle = '#b71c1c';
-  ctx.beginPath();
-  ctx.ellipse(35, 6, 13, 4, 0.08, 0, Math.PI * 2);
-  ctx.fill();
-
-  // One visible eyebrow
-  ctx.strokeStyle = '#4e2b22';
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.moveTo(25, 11);
-  ctx.lineTo(32, 12);
-  ctx.stroke();
-
-  // One visible eye looking forward
-  ctx.fillStyle = '#fff';
-  ctx.beginPath();
-  ctx.arc(29, 16, 4, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#222';
-  ctx.beginPath();
-  ctx.arc(30, 16, 1.8, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Mischievous smile in profile
-  ctx.strokeStyle = '#6d2e28';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(29, 22, 6, 0.05, 1.05);
-  ctx.stroke();
-
-  // Small motion streaks while running
-  if (player.running && Math.abs(player.vx) > 2) {
-    ctx.strokeStyle = 'rgba(255,255,255,.45)';
-    ctx.lineWidth = 3;
-    for (let i = 0; i < 3; i++) {
+  // Clearly visible running dust / footprints behind the boy.
+  if (runningFast) {
+    const phase = now * 0.018;
+    const dir = player.direction || 1;
+    for (let i = 0; i < 4; i++) {
+      const life = (phase + i * 0.8) % 2.4;
+      const alpha = Math.max(0, 0.62 - life * 0.22);
+      const radius = 2.2 + life * 1.8;
+      const px = x + player.width / 2 - dir * (14 + life * 10);
+      const py = y + player.height - 4 - life * 5;
+      ctx.fillStyle = `rgba(245,235,210,${alpha})`;
       ctx.beginPath();
-      ctx.moveTo(4 - i * 6, 26 + i * 8);
-      ctx.lineTo(-12 - i * 8, 26 + i * 8);
+      ctx.arc(px, py, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Two stronger ground marks make the running trail visible even on bright ground.
+    ctx.strokeStyle = 'rgba(120,85,55,.38)';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 2; i++) {
+      const px = x + player.width / 2 - dir * (11 + i * 12);
+      const py = y + player.height - 2;
+      ctx.beginPath();
+      ctx.moveTo(px - dir * 4, py);
+      ctx.lineTo(px - dir * 10, py + 1);
       ctx.stroke();
     }
+  }
+
+  if (img && img.complete && img.naturalWidth > 0) {
+    // Keep the supplied transparent PNG small enough to read as a child.
+    const drawH = 64;
+    const drawW = drawH * (img.naturalWidth / img.naturalHeight);
+    const drawX = x + (player.width - drawW) / 2;
+    const drawY = y + player.height - drawH + bob;
+
+    // The supplied artwork is front-facing, so don't distort it by flipping it.
+    // Slightly rotate while running to give the sprite a lively motion.
+    const lean = runningFast ? -0.035 * (player.direction || 1) : 0;
+    ctx.translate(x + player.width / 2, y + player.height - drawH / 2 + bob);
+    ctx.rotate(lean);
+    ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+  } else {
+    // Tiny fallback while the PNG is still loading; it disappears once the image loads.
+    ctx.fillStyle = '#d32f2f';
+    ctx.fillRect(x + 8, y + 20, 26, 22);
+    ctx.fillStyle = '#f2b58d';
+    ctx.beginPath();
+    ctx.arc(x + 21, y + 14, 12, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   ctx.restore();
@@ -5696,64 +5616,6 @@ setLanguage(selectedLanguage);
     lastAddonLevel = currentLevel;
   }
 
-  // Independent shield pickup: every level, protects the player for 10 seconds.
-  let shieldPickup = null;
-  let shieldPickupLevel = null;
-
-  function resetShieldPickupForCurrentLevel() {
-    const shieldX = Math.max(900, currentLevelWidth * 0.62);
-    let platformUnder = null;
-    if (Array.isArray(platforms)) {
-      let best = Infinity;
-      for (const p of platforms) {
-        if (p.x < shieldX + 120 && p.x + p.width > shieldX - 120) {
-          const d = Math.abs((p.x + p.width / 2) - shieldX);
-          if (d < best) { best = d; platformUnder = p; }
-        }
-      }
-    }
-    shieldPickup = {
-      x: shieldX,
-      y: platformUnder ? platformUnder.y - 38 : 420,
-      width: 34, height: 34, collected: false
-    };
-    shieldPickupLevel = currentLevel;
-  }
-
-  function shieldPickupCollision() {
-    if (!shieldPickup || shieldPickup.collected) return;
-    if (
-      player.x < shieldPickup.x + shieldPickup.width &&
-      player.x + player.width > shieldPickup.x &&
-      player.y < shieldPickup.y + shieldPickup.height &&
-      player.y + player.height > shieldPickup.y
-    ) {
-      shieldPickup.collected = true;
-      expansion.invincibleUntil = Date.now() + 10000;
-      expansion.shield = 0;
-      announce(languageText() ? '🛡️ Shield active for 10 seconds!' : '🛡️ الدرع يحميك لمدة 10 ثواني!');
-      updateHud();
-      if (typeof soundCoin === 'function') soundCoin();
-    }
-  }
-
-  function drawShieldPickup() {
-    if (!shieldPickup || shieldPickup.collected) return;
-    const x = shieldPickup.x - cameraX;
-    if (x < -80 || x > canvas.width + 80) return;
-    const pulse = 1 + Math.sin(performance.now() * 0.006) * 0.06;
-    ctx.save();
-    ctx.translate(x, shieldPickup.y + shieldPickup.height / 2);
-    ctx.scale(pulse, pulse);
-    ctx.font = '30px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(80,180,255,.9)';
-    ctx.shadowBlur = 14;
-    ctx.fillText('🛡️', 0, 0);
-    ctx.restore();
-  }
-
   function laserPickupCollision() {
     if (!laserPickup || laserPickup.collected) return;
 
@@ -5811,7 +5673,6 @@ setLanguage(selectedLanguage);
     if (!gameRunning) return;
 
     laserPickupCollision();
-    shieldPickupCollision();
 
     for (let i = laserBolts.length - 1; i >= 0; i--) {
 
@@ -6109,7 +5970,6 @@ setLanguage(selectedLanguage);
     );
 
     resetLaserForCurrentLevel();
-      resetShieldPickupForCurrentLevel();
   };
 
   // Keyboard laser: F or X.
@@ -6138,7 +5998,6 @@ setLanguage(selectedLanguage);
         currentLevel !== lastAddonLevel
       ) {
         resetLaserForCurrentLevel();
-      resetShieldPickupForCurrentLevel();
       }
 
       updateLaser();
@@ -6154,7 +6013,6 @@ setLanguage(selectedLanguage);
 
   // The first level has already been loaded by the stable game.
   resetLaserForCurrentLevel();
-      resetShieldPickupForCurrentLevel();
 
   // Keep the main-menu button available whenever gameplay is active.
   // This only creates the existing button; it does not alter the game loop.
@@ -6617,7 +6475,6 @@ setLanguage(selectedLanguage);
     const wrappedDraw = function(...args) {
       const result = originalDraw.apply(this, args);
       drawExtras();
-    drawShieldPickup();
       return result;
     };
     wrappedDraw.__expWrapped = true;
@@ -8079,123 +7936,71 @@ setLanguage(selectedLanguage);
   }
 
   function draw3DPlayer() {
+    // IMPORTANT: use the collision box bottom as the exact foot line.
     const left=player.x-cameraX;
     const footY=player.y+player.height;
-    const moving=Math.abs(player.vx)>0.35;
-    const running=!!player.running && !!player.ground && moving;
-    const moveDir=player.direction<0?-1:1;
-    // When the boy stops, he nervously looks behind him.
-    const faceDir=moving?moveDir:-moveDir;
-    const tt=performance.now()*.018;
-    const stride=running?Math.sin(tt)*4:0;
+    const dir=player.direction<0?-1:1;
+    const run=!!player.running && !!player.ground;
+    const tt=performance.now()*.022;
+    const stride=run?Math.sin(tt)*5:0;
 
-    // Running footprints/dust are deliberately outside the body transform so they stay behind him.
-    if(running){
-      ctx.save();
-      const rear=left+player.width/2-faceDir*15;
-      for(let i=0;i<4;i++){
-        const age=(performance.now()*.004+i*.7)%1;
-        const px=rear-faceDir*(age*20);
-        const py=footY-2-age*10;
-        const a=(1-age)*.38;
-        ctx.fillStyle=`rgba(255,245,220,${a})`;
-        ctx.beginPath();ctx.ellipse(px,py,3+age*2,1.8+age*1.5,0,0,TAU);ctx.fill();
-      }
-      ctx.fillStyle="rgba(90,65,45,.42)";
-      ctx.beginPath();ctx.ellipse(rear-faceDir*5,footY+1,5,2,0,0,TAU);ctx.fill();
-      ctx.restore();
-    }
-
-    // Ground shadow.
+    // Shadow sits exactly on the platform/floor.
     ctx.save();
     ctx.fillStyle="rgba(0,0,0,.24)";
-    ctx.beginPath();ctx.ellipse(left+player.width/2,footY+1,16,4,0,0,TAU);ctx.fill();
+    ctx.beginPath();ctx.ellipse(left+player.width/2,footY+1,18,4.5,0,0,TAU);ctx.fill();
     ctx.restore();
 
-    // Small-child proportions: compact torso, shorter legs, larger head.
+    // Character is drawn upward FROM footY, not from player.y.
     ctx.save();
     ctx.translate(left+player.width/2,footY);
-    ctx.scale(faceDir,1);
+    ctx.scale(dir,1);
 
-    // Sport sneakers.
-    ctx.fillStyle="#20252b";
-    ctx.beginPath();ctx.roundRect(-12-stride,-7,15,7,4);ctx.fill();
-    ctx.beginPath();ctx.roundRect(3+stride,-7,15,7,4);ctx.fill();
-    ctx.fillStyle="#f1f1f1";
-    ctx.fillRect(-9-stride,-6,9,2);ctx.fillRect(6+stride,-6,9,2);
+    // shoes — their bottom is exactly footY
+    ctx.fillStyle="#14181c";
+    ctx.beginPath();ctx.roundRect(-13-stride, -8, 17, 8, 4);ctx.fill();
+    ctx.beginPath();ctx.roundRect(4+stride, -8, 17, 8, 4);ctx.fill();
 
-    // Short black trousers.
-    ctx.fillStyle="#11151a";
-    ctx.beginPath();ctx.roundRect(-13,-27,26,18,7);ctx.fill();
+    // legs
+    const lg=ctx.createLinearGradient(0,-37,0,-8);
+    lg.addColorStop(0,"#4269b0");lg.addColorStop(1,"#1d3768");
+    ctx.strokeStyle=lg;ctx.lineWidth=9;ctx.lineCap="round";
+    ctx.beginPath();ctx.moveTo(-5,-10);ctx.lineTo(-7-stride,-32);ctx.moveTo(6,-10);ctx.lineTo(8+stride,-32);ctx.stroke();
 
-    // Short legs.
-    ctx.strokeStyle="#2a2d32";ctx.lineWidth=7;ctx.lineCap="round";
-    ctx.beginPath();
-    ctx.moveTo(-6,-11);ctx.lineTo(-7-stride,-25);
-    ctx.moveTo(6,-11);ctx.lineTo(7+stride,-25);
-    ctx.stroke();
+    // body
+    const bg=ctx.createLinearGradient(-20,-78,18,-32);
+    bg.addColorStop(0,"#ff9a4c");bg.addColorStop(.45,"#ed642b");bg.addColorStop(1,"#a73a21");
+    ctx.fillStyle=bg;ctx.beginPath();ctx.roundRect(-17,-76,34,43,10);ctx.fill();
 
-    // Red sweater.
-    const shirt=ctx.createLinearGradient(-15,-64,16,-27);
-    shirt.addColorStop(0,"#ff5148");shirt.addColorStop(.5,"#df2929");shirt.addColorStop(1,"#941919");
-    ctx.fillStyle=shirt;
-    ctx.beginPath();ctx.roundRect(-15,-62,30,36,9);ctx.fill();
+    // arm
+    const skin=ctx.createLinearGradient(-10,-75,24,-35);
+    skin.addColorStop(0,"#ffd4ae");skin.addColorStop(1,"#b9684c");
+    ctx.strokeStyle=skin;ctx.lineWidth=8;
+    ctx.beginPath();ctx.moveTo(10,-65);ctx.lineTo(21,-48);ctx.stroke();
 
-    // Arms swinging while running; tense arms when scared.
-    const skin=ctx.createLinearGradient(-8,-60,15,-25);
-    skin.addColorStop(0,"#ffd7b5");skin.addColorStop(1,"#b86b50");
-    ctx.strokeStyle=skin;ctx.lineWidth=6;ctx.lineCap="round";
-    ctx.beginPath();
-    if(running){
-      ctx.moveTo(-11,-53);ctx.lineTo(-18,-38+stride);
-      ctx.moveTo(11,-53);ctx.lineTo(18,-39-stride);
-    }else{
-      ctx.moveTo(-10,-51);ctx.lineTo(-17,-39);
-      ctx.moveTo(10,-51);ctx.lineTo(18,-41);
-    }
-    ctx.stroke();
+    // neck + head
+    ctx.fillStyle=skin;ctx.fillRect(1,-87,10,13);
+    ctx.beginPath();ctx.arc(6,-101,19,0,TAU);ctx.fill();
 
-    // Neck and oversized child head.
-    ctx.fillStyle=skin;ctx.fillRect(-4,-69,8,10);
-    ctx.beginPath();ctx.arc(1,-82,17,0,TAU);ctx.fill();
+    // hair
+    ctx.fillStyle="#281c18";ctx.beginPath();ctx.arc(0,-111,15,Math.PI,TAU);ctx.fill();
 
-    // Hair.
-    ctx.fillStyle="#2a211e";
-    ctx.beginPath();ctx.arc(-3,-91,13,Math.PI,TAU);ctx.fill();
-    ctx.beginPath();ctx.arc(-12,-86,5,0,TAU);ctx.fill();
+    // red cap, volumetric
+    const cap=ctx.createLinearGradient(-15,-126,18,-100);
+    cap.addColorStop(0,"#ff5b52");cap.addColorStop(.45,"#e72e2e");cap.addColorStop(1,"#8e1717");
+    ctx.fillStyle=cap;ctx.beginPath();ctx.arc(3,-115,17,Math.PI,TAU);ctx.fill();
+    ctx.fillRect(-10,-116,26,7);
+    ctx.fillStyle="#a81c1c";ctx.beginPath();ctx.ellipse(21,-109,13,4,-.1,0,TAU);ctx.fill();
 
-    // Red cap.
-    const cap=ctx.createLinearGradient(-14,-101,15,-83);
-    cap.addColorStop(0,"#ff625a");cap.addColorStop(.5,"#e52d2d");cap.addColorStop(1,"#8f1515");
-    ctx.fillStyle=cap;
-    ctx.beginPath();ctx.arc(-1,-94,14,Math.PI,TAU);ctx.fill();
-    ctx.fillRect(-12,-94,22,6);
-    ctx.fillStyle="#a71b1b";
-    ctx.beginPath();ctx.ellipse(17,-89,10,3,-.08,0,TAU);ctx.fill();
+    // face profile
+    ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(17,-101,4.5,0,TAU);ctx.fill();
+    ctx.fillStyle="#111";ctx.beginPath();ctx.arc(18,-101,2,0,TAU);ctx.fill();
+    ctx.fillStyle="#d88e6b";poly([[24,-99],[31,-95],[24,-93]],"#d88e6b");
+    ctx.strokeStyle="#8a4939";ctx.lineWidth=2;ctx.beginPath();ctx.arc(19,-91,5,.15,1.05);ctx.stroke();
 
-    // Face: normally looks where he runs; when stopped he looks behind, visibly frightened.
-    ctx.fillStyle="#fff";
-    ctx.beginPath();ctx.arc(12,-82,4,0,TAU);ctx.fill();
-    ctx.fillStyle="#111";
-    ctx.beginPath();ctx.arc(13,-82,1.8,0,TAU);ctx.fill();
-    ctx.fillStyle="#d98e6c";
-    poly([[18,-80],[24,-77],[18,-75]],"#d98e6c");
+    // rim light
+    ctx.strokeStyle="rgba(255,255,255,.20)";ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(6,-101,19,Math.PI*1.15,Math.PI*1.85);ctx.stroke();
 
-    if(!moving){
-      // frightened eyebrow + open mouth
-      ctx.strokeStyle="#4b2c29";ctx.lineWidth=2;
-      ctx.beginPath();ctx.moveTo(8,-88);ctx.lineTo(16,-90);ctx.stroke();
-      ctx.fillStyle="#7b2630";
-      ctx.beginPath();ctx.ellipse(17,-70,3.5,5,0,0,TAU);ctx.fill();
-      ctx.strokeStyle="#7b2630";ctx.beginPath();ctx.arc(14,-75,6,.15,.9);ctx.stroke();
-    }else{
-      ctx.strokeStyle="#8a4939";ctx.lineWidth=2;
-      ctx.beginPath();ctx.arc(17,-72,5,.15,1.05);ctx.stroke();
-    }
-
-    // Soft rim light for the 3D look.
-    ctx.strokeStyle="rgba(255,255,255,.22)";ctx.lineWidth=2;
-    ctx.beginPath();ctx.arc(1,-82,17,Math.PI*1.15,Math.PI*1.8);ctx.stroke();
     ctx.restore();
   }
 
