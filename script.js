@@ -120,7 +120,7 @@ function initAudio() {
       audioContext.createGain();
 
     masterGain.gain.value =
-      0.16;
+      0.24;
 
     masterGain.connect(
       audioContext.destination
@@ -724,9 +724,9 @@ function startMusic() {
 
       playTone(
         note,
-        0.11,
+        0.16,
         "triangle",
-        0.018,
+        0.045,
         0
       );
 
@@ -5394,7 +5394,7 @@ const menuText = {
     gameOver: 'Game Over!', restart: '🔄 Restart Level — 3 Lives',
     tryAgain: 'Try again',
     victory: 'Congratulations!', newGame: '🔄 Play Again',
-    levelStart: 'Level ', nextInfo: 'Difficulty increases!'
+    levelStart: 'Level ', nextInfo: 'Difficulty increases!', loadGame: '▶ Load Game'
   }
 };
 
@@ -5428,6 +5428,8 @@ function updateStartMenuTexts() {
   const t = menuText[selectedLanguage];
   startMenu.querySelector('.game-title').textContent = t.title;
   startMenu.querySelector('.play-btn').textContent = t.play;
+  const loadButton = startMenu.querySelector('.load-btn');
+  if (loadButton) loadButton.textContent = t.loadGame || (selectedLanguage === 'en' ? '▶ Load Game' : '▶ تحميل الحفظ');
   startMenu.querySelector('.settings-btn').textContent = t.settings;
   const exitButton = startMenu.querySelector('.exit-btn');
   if (exitButton) exitButton.textContent = t.exit;
@@ -5532,8 +5534,8 @@ function initStartScreen() {
     initAudio();
     soundButton();
     let data = {};
-    try { data = JSON.parse(localStorage.getItem("naughtyBoySaveV3") || "{}"); } catch (_) {}
-    const savedLevel = Math.max(1, Math.min(TOTAL_LEVELS, Number(data.level || 1)));
+    try { data = JSON.parse(localStorage.getItem("naughtyBoySaveV3") || localStorage.getItem("naughtyBoySaveV5") || "{}"); } catch (_) {}
+    const savedLevel = Math.max(1, Math.min(TOTAL_LEVELS, Number(data.level || data.completedLevel || 1)));
     currentLevel = savedLevel;
     score = Number(data.score || 0);
     coins = Number(data.coins || 0);
@@ -6092,6 +6094,15 @@ setLanguage(selectedLanguage);
   // The first level has already been loaded by the stable game.
   resetLaserForCurrentLevel();
 
+  // Keep the main-menu button available whenever gameplay is active.
+  // This only creates the existing button; it does not alter the game loop.
+  setInterval(() => {
+    if (gameRunning) {
+      makeMainMenuButton();
+      updateMainMenuButtonText();
+    }
+  }, 120);
+
 })();
 
 
@@ -6111,6 +6122,8 @@ setLanguage(selectedLanguage);
     jump: 40,
     laser: 30
   };
+
+  let lastCompletionSavedLevel = 0;
 
   let expansion = {
     stageStars: 0,
@@ -6155,6 +6168,7 @@ setLanguage(selectedLanguage);
       const old = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}");
       const data = {
         level: Math.max(old.level || 1, getStage()),
+        completedLevel: Math.max(old.completedLevel || 0, getStage()),
         coins: getCoins(),
         score: getScore(),
         shield: expansion.shield,
@@ -6473,12 +6487,13 @@ setLanguage(selectedLanguage);
     }
 
     // Award stage stars based on clean completion conditions.
-    if (typeof levelComplete !== "undefined" && levelComplete) {
+    if (typeof levelComplete !== "undefined" && levelComplete && lastCompletionSavedLevel !== getStage()) {
       const elapsed = (Date.now() - expansion.stageStartTime) / 1000;
       if (elapsed <= 180) expansion.stageStars = Math.max(expansion.stageStars, 1);
       if (getCoins() - expansion.stageCoinsStart >= 20) expansion.stageStars = Math.max(expansion.stageStars, 2);
       if (expansion.boss && expansion.bossDefeated) expansion.stageStars = 3;
       saveProgress();
+      lastCompletionSavedLevel = getStage();
     }
   }
 
