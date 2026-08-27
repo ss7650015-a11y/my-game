@@ -542,3 +542,201 @@ body {
   background: linear-gradient(#7edcff 0%, #9ce5ff 58%, #5b9b70 100%);
 }
 #visualStyleBadge { display:none !important; }
+
+/* ============================================================
+   ANDROID / BLUESTACKS SAFE MOBILE PATCH
+   Added on top of the existing stylesheet; original game styles
+   remain unchanged.
+   ============================================================ */
+
+html, body {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+#gameWrapper {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  touch-action: none;
+}
+
+#gameCanvas {
+  display: block;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 700px) {
+  html, body {
+    overflow: hidden;
+  }
+
+  #gameWrapper {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 480px !important;
+    border-radius: 0 !important;
+  }
+
+  #gameWrapper #gameCanvas {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 480px !important;
+  }
+
+  #hud {
+    z-index: 5000 !important;
+  }
+
+  #message {
+    z-index: 6000 !important;
+  }
+
+  #controls {
+    z-index: 4000 !important;
+  }
+}
+
+@supports not (height: 100dvh) {
+  @media (max-width: 700px) {
+    #gameWrapper {
+      height: 100vh !important;
+    }
+  }
+}
+
+
+/* ============================================================
+   APK / MEDIAN HUD + MAIN MENU FIX
+   Only layout/UI: game logic, enemies, stages and drawings are untouched.
+   ============================================================ */
+
+#gameWrapper.reference-platformer #hud {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 10010 !important;
+  pointer-events: none !important;
+}
+
+#gameWrapper.reference-platformer #hud div {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+#expTimer {
+  display: none !important;
+}
+
+/* The old expansion strip is kept only for stars/shield, below the main HUD. */
+#expansionHud {
+  top: 112px !important;
+  left: 12px !important;
+  z-index: 10000 !important;
+}
+
+/* The main-menu button must stay clear of the bottom touch controls
+   and of hosting/provider badges. */
+#safeMainMenuButton {
+  top: 14px !important;
+  right: 14px !important;
+  bottom: auto !important;
+  z-index: 10020 !important;
+}
+
+@media (max-width: 700px) {
+  #gameWrapper.reference-platformer #hud {
+    top: 10px !important;
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    max-width: calc(100vw - 16px) !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-start !important;
+    gap: 4px !important;
+    direction: rtl !important;
+  }
+
+  #gameWrapper.reference-platformer #hud div {
+    min-width: 0 !important;
+    padding: 6px 8px !important;
+    font-size: 11px !important;
+    white-space: nowrap !important;
+  }
+
+  #expansionHud {
+    top: 108px !important;
+    left: 8px !important;
+    max-width: 38% !important;
+    gap: 4px !important;
+    font-size: 10px !important;
+  }
+
+  #expansionHud span {
+    padding: 5px 7px !important;
+  }
+
+  #safeMainMenuButton {
+    top: 74px !important;
+    right: 10px !important;
+    padding: 7px 10px !important;
+    font-size: 12px !important;
+  }
+}
+
+
+/* ============================================================
+   FINAL APK AUDIO POLICY
+   No sound/mute button. Sound is always enabled.
+   ============================================================ */
+#soundToggle,
+button#soundToggle {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+
+/* FINAL HUD POSITION:
+   score/coins/lives/stage/laser first,
+   stars + shield directly underneath them. */
+#gameWrapper.reference-platformer #expansionHud {
+  top: 112px !important;
+  left: 12px !important;
+  right: auto !important;
+  z-index: 10000 !important;
+}
+
+#gameWrapper.reference-platformer #expansionHud span {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+@media (max-width: 700px) {
+  #gameWrapper.reference-platformer #expansionHud {
+    top: 108px !important;
+    left: 8px !important;
+    max-width: calc(100vw - 16px) !important;
+  }
+}
+
+
+/* FINAL HUD: stars ⭐ and shield 🛡️ removed completely */
+#expansionHud,
+#expStars,
+#expShield {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
