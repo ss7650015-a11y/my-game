@@ -8056,28 +8056,23 @@ setLanguage(selectedLanguage);
     ctx.translate(left + player.width / 2, footY);
     ctx.scale(dir * 0.68, 0.68);
 
-    // Back shoe/leg (slightly behind the body)
-    ctx.fillStyle = '#f4f4f4';
-    ctx.beginPath(); ctx.roundRect(-10 - stride * .35, -7, 15, 7, 3); ctx.fill();
-    ctx.fillStyle = '#17191c';
-    ctx.strokeStyle = '#17191c';
-    ctx.lineWidth = 8;
-    ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(-4, -10); ctx.lineTo(-7 - stride * .55, -29); ctx.stroke();
-
-    // Front shoe/leg points along the path.
+    // Side profile: only the visible arm and the visible leg are drawn.
+    // The opposite arm/leg are hidden behind the body and are intentionally not rendered.
     ctx.fillStyle = '#f8f8f8';
     ctx.beginPath(); ctx.roundRect(1 - stride * .35, -7, 19, 7, 3); ctx.fill();
     ctx.fillStyle = '#222';
     ctx.fillRect(4 - stride * .35, -2, 14, 2);
+    ctx.fillStyle = '#17191c';
+    ctx.strokeStyle = '#17191c';
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(5, -10); ctx.lineTo(9 + stride * .65, -29); ctx.stroke();
 
-    // Small black pants, side profile
+    // Small black pants, one visible leg only.
     ctx.strokeStyle = '#17191c';
     ctx.lineWidth = 8;
     ctx.beginPath();
-    ctx.moveTo(0, -30); ctx.lineTo(-7 - stride * .55, -11);
-    ctx.moveTo(4, -30); ctx.lineTo(9 + stride * .65, -11);
+    ctx.moveTo(2, -30); ctx.lineTo(9 + stride * .65, -11);
     ctx.stroke();
 
     // Red sweater — narrow side silhouette
@@ -8090,12 +8085,10 @@ setLanguage(selectedLanguage);
     ctx.roundRect(-11, -67, 24, 38, 8);
     ctx.fill();
 
-    // Back arm and forward arm, both aligned with the path
-    ctx.strokeStyle = '#c98263';
-    ctx.lineWidth = 6;
-    ctx.beginPath();
-    ctx.moveTo(-5, -57); ctx.lineTo(-10, -42 + stride * .35); ctx.stroke();
+    // Side profile: only one arm is visible; the opposite arm stays behind the torso.
     ctx.strokeStyle = '#e7a47d';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(7, -57); ctx.lineTo(17, -43 - stride * .45); ctx.stroke();
 
