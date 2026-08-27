@@ -8372,3 +8372,46 @@ setLanguage(selectedLanguage);
   window.addEventListener('resize', sync);
   if (touchQuery.addEventListener) touchQuery.addEventListener('change', sync);
 })();
+/* ============================================================
+   SUPPLIED CHARACTER IMAGE — VISUAL ONLY
+   Uses the exact PNG supplied by the user. No gameplay systems
+   or collision values are changed here.
+   ============================================================ */
+(function installSuppliedCharacterImage(){
+  const oldDrawPlayer = drawPlayer;
+  const suppliedBoy = new Image();
+  suppliedBoy.decoding = 'async';
+  suppliedBoy.src = 'boy-character.png';
+
+  drawPlayer = function(){
+    if (!suppliedBoy.complete || !suppliedBoy.naturalWidth) {
+      oldDrawPlayer();
+      return;
+    }
+
+    const x = player.x - cameraX;
+    const footY = player.y + player.height;
+    const dir = player.direction < 0 ? -1 : 1;
+    const moving = !!player.running && !!player.ground;
+    const bob = moving ? Math.sin(performance.now() * 0.022) * 1.5 : 0;
+
+    // Keep the existing collision box untouched. Only the visual sprite
+    // is changed, with its feet aligned to the existing collision bottom.
+    const drawH = 66;
+    const drawW = drawH * (suppliedBoy.naturalWidth / suppliedBoy.naturalHeight);
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,.22)';
+    ctx.beginPath();
+    ctx.ellipse(x + player.width / 2, footY + 1, 18, 4.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(x + player.width / 2, footY + bob);
+    ctx.scale(dir, 1);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(suppliedBoy, -drawW / 2, -drawH, drawW, drawH);
+    ctx.restore();
+  };
+})();
