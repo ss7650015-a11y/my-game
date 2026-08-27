@@ -4788,161 +4788,49 @@ function drawEyes(
 // ============================================================
 
 function drawPlayer() {
-
   const x = player.x - cameraX;
   const y = player.y;
-  const t = performance.now() * 0.012;
   const moving = Math.abs(player.vx) > 0.2;
-  const step = moving
-    ? Math.sin(t * (player.running ? 1.7 : 1.0)) * 4
-    : 0;
-  const bob = moving
-    ? Math.abs(Math.sin(t * (player.running ? 1.7 : 1.0))) * 1.3
-    : 0;
+  const running = player.running && Math.abs(player.vx) > 2;
+
+  // Use the exact small boy from the game's cover as the player sprite.
+  if (!window.coverBoySprite) {
+    window.coverBoySprite = new Image();
+    window.coverBoySprite.src = 'boy-cover.png';
+  }
+
+  const sprite = window.coverBoySprite;
+  const bob = moving ? Math.abs(Math.sin(performance.now() * (running ? 0.018 : 0.012))) * 1.2 : 0;
+  const drawW = 56;
+  const drawH = 58;
+  const drawY = y + player.height - drawH + bob;
+  const dir = player.direction < 0 ? -1 : 1;
 
   ctx.save();
-  ctx.translate(x + player.width / 2, y + bob);
-  ctx.scale(player.direction || 1, 1);
-  ctx.translate(-player.width / 2, 0);
 
-  // Shadow
+  // Ground shadow.
   ctx.fillStyle = 'rgba(0,0,0,.22)';
   ctx.beginPath();
-  ctx.ellipse(21, 59, player.running ? 27 : 23, 6, 0, 0, Math.PI * 2);
+  ctx.ellipse(x + player.width / 2, y + player.height + 1, running ? 25 : 22, 5, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Back leg
-  ctx.strokeStyle = '#253b73';
-  ctx.lineWidth = 9;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(22, 43);
-  ctx.lineTo(17 - step * 0.7, 54);
-  ctx.stroke();
+  if (sprite.complete && sprite.naturalWidth > 0) {
+    ctx.translate(x + player.width / 2, 0);
+    ctx.scale(dir, 1);
+    ctx.drawImage(sprite, -drawW / 2, drawY, drawW, drawH);
+  }
 
-  // Front leg
-  ctx.beginPath();
-  ctx.moveTo(27, 43);
-  ctx.lineTo(31 + step * 0.7, 54);
-  ctx.stroke();
-
-  // Shoes pointing forward
-  ctx.fillStyle = '#242424';
-  ctx.beginPath();
-  ctx.roundRect(11 - step * 0.7, 51, 18, 8, 4);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.roundRect(27 + step * 0.7, 51, 18, 8, 4);
-  ctx.fill();
-
-  // Hoodie / shirt body
-  ctx.fillStyle = player.running ? '#e85d2a' : '#ef6a2f';
-  ctx.beginPath();
-  ctx.roundRect(7, 22, 28, 24, 8);
-  ctx.fill();
-
-  // Hoodie pocket
-  ctx.fillStyle = '#d94e25';
-  ctx.beginPath();
-  ctx.roundRect(14, 35, 17, 8, 4);
-  ctx.fill();
-
-  // Back arm
-  ctx.strokeStyle = '#d95429';
-  ctx.lineWidth = 8;
-  ctx.beginPath();
-  ctx.moveTo(10, 27);
-  ctx.lineTo(5, 39 - step);
-  ctx.stroke();
-
-  // Front arm swinging forward
-  ctx.strokeStyle = '#ef6a2f';
-  ctx.beginPath();
-  ctx.moveTo(32, 27);
-  ctx.lineTo(40, 36 + step);
-  ctx.stroke();
-
-  // Hands
-  ctx.fillStyle = '#f2b58d';
-  ctx.beginPath();
-  ctx.arc(5, 40 - step, 5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(40, 37 + step, 5, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Neck
-  ctx.fillStyle = '#d99068';
-  ctx.fillRect(22, 17, 8, 8);
-
-  // Side-profile head: nose projects forward, one eye visible.
-  ctx.fillStyle = '#f2b58d';
-  ctx.beginPath();
-  ctx.ellipse(23, 13, 15, 16, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Back ear
-  ctx.beginPath();
-  ctx.arc(9, 15, 4, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Nose pointing in movement direction
-  ctx.beginPath();
-  ctx.moveTo(34, 17);
-  ctx.quadraticCurveTo(43, 20, 34, 23);
-  ctx.closePath();
-  ctx.fill();
-
-  // Hair visible under cap
-  ctx.fillStyle = '#2b1b16';
-  ctx.beginPath();
-  ctx.arc(21, 6, 13, Math.PI, Math.PI * 2);
-  ctx.fill();
-
-  // Naughty cap with visor pointing forward
-  ctx.fillStyle = '#d32f2f';
-  ctx.beginPath();
-  ctx.arc(21, 2, 13, Math.PI, Math.PI * 2);
-  ctx.fill();
-  ctx.fillRect(9, 1, 24, 5);
-  ctx.fillStyle = '#b71c1c';
-  ctx.beginPath();
-  ctx.ellipse(35, 6, 13, 4, 0.08, 0, Math.PI * 2);
-  ctx.fill();
-
-  // One visible eyebrow
-  ctx.strokeStyle = '#4e2b22';
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.moveTo(25, 11);
-  ctx.lineTo(32, 12);
-  ctx.stroke();
-
-  // One visible eye looking forward
-  ctx.fillStyle = '#fff';
-  ctx.beginPath();
-  ctx.arc(29, 16, 4, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#222';
-  ctx.beginPath();
-  ctx.arc(30, 16, 1.8, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Mischievous smile in profile
-  ctx.strokeStyle = '#6d2e28';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(29, 22, 6, 0.05, 1.05);
-  ctx.stroke();
-
-  // Small motion streaks while running
-  if (player.running && Math.abs(player.vx) > 2) {
+  // Preserve the running trail effect.
+  if (running) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.strokeStyle = 'rgba(255,255,255,.45)';
     ctx.lineWidth = 3;
     for (let i = 0; i < 3; i++) {
+      const trailX = x + player.width / 2 - dir * (24 + i * 7);
+      const trailY = y + 25 + i * 8;
       ctx.beginPath();
-      ctx.moveTo(4 - i * 6, 26 + i * 8);
-      ctx.lineTo(-12 - i * 8, 26 + i * 8);
+      ctx.moveTo(trailX, trailY);
+      ctx.lineTo(trailX - dir * 15, trailY);
       ctx.stroke();
     }
   }
@@ -8016,123 +7904,70 @@ setLanguage(selectedLanguage);
   }
 
   function draw3DPlayer() {
-    // SIDE-FACING SMALL CHILD CHARACTER — visual replacement only.
-    // The whole body, head and feet face the movement path. No sweat, no breathing,
-    // and no look-back animation. Running trail is preserved.
-    const left = player.x - cameraX;
-    const footY = player.y + player.height;
-    const dir = player.direction < 0 ? -1 : 1;
-    const moving = Math.abs(player.vx) > 0.25;
-    const run = !!player.running && !!player.ground && moving;
-    const t = performance.now() * 0.013;
-    const stride = run ? Math.sin(t * 1.7) * 5 : (moving ? Math.sin(t) * 2 : 0);
+    // IMPORTANT: use the collision box bottom as the exact foot line.
+    const left=player.x-cameraX;
+    const footY=player.y+player.height;
+    const dir=player.direction<0?-1:1;
+    const run=!!player.running && !!player.ground;
+    const tt=performance.now()*.022;
+    const stride=run?Math.sin(tt)*5:0;
 
-    // Ground shadow
+    // Shadow sits exactly on the platform/floor.
     ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,.20)';
-    ctx.beginPath();
-    ctx.ellipse(left + player.width / 2, footY + 1, 12, 3.2, 0, 0, TAU);
-    ctx.fill();
+    ctx.fillStyle="rgba(0,0,0,.24)";
+    ctx.beginPath();ctx.ellipse(left+player.width/2,footY+1,18,4.5,0,0,TAU);ctx.fill();
     ctx.restore();
 
-    // Running trail — keep it visible and behind the child.
-    if (run) {
-      ctx.save();
-      const trailDir = -dir;
-      for (let i = 0; i < 5; i++) {
-        const phase = (performance.now() * 0.007 + i * 1.35) % 3;
-        const px = left + player.width / 2 + trailDir * (10 + phase * 5 + i * 4);
-        const py = footY - 2 - (i % 2) * 2 - phase * 1.2;
-        const r = 1.8 + (i % 2) * 0.9;
-        ctx.fillStyle = 'rgba(205,190,165,' + Math.max(.12, (0.82 - phase * 0.16)) + ')';
-        ctx.beginPath(); ctx.arc(px, py, r, 0, TAU); ctx.fill();
-      }
-      ctx.restore();
-    }
-
-    // Draw in a genuine side profile. The local artwork faces RIGHT;
-    // the final scale mirrors it when the player moves left.
+    // Character is drawn upward FROM footY, not from player.y.
     ctx.save();
-    ctx.translate(left + player.width / 2, footY);
-    ctx.scale(dir * 0.68, 0.68);
+    ctx.translate(left+player.width/2,footY);
+    ctx.scale(dir,1);
 
-    // Side profile: only the visible arm and the visible leg are drawn.
-    // The opposite arm/leg are hidden behind the body and are intentionally not rendered.
-    ctx.fillStyle = '#f8f8f8';
-    ctx.beginPath(); ctx.roundRect(1 - stride * .35, -7, 19, 7, 3); ctx.fill();
-    ctx.fillStyle = '#222';
-    ctx.fillRect(4 - stride * .35, -2, 14, 2);
-    ctx.fillStyle = '#17191c';
-    ctx.strokeStyle = '#17191c';
-    ctx.lineWidth = 8;
-    ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(5, -10); ctx.lineTo(9 + stride * .65, -29); ctx.stroke();
+    // shoes — their bottom is exactly footY
+    ctx.fillStyle="#14181c";
+    ctx.beginPath();ctx.roundRect(-13-stride, -8, 17, 8, 4);ctx.fill();
+    ctx.beginPath();ctx.roundRect(4+stride, -8, 17, 8, 4);ctx.fill();
 
-    // Small black pants, one visible leg only.
-    ctx.strokeStyle = '#17191c';
-    ctx.lineWidth = 8;
-    ctx.beginPath();
-    ctx.moveTo(2, -30); ctx.lineTo(9 + stride * .65, -11);
-    ctx.stroke();
+    // legs
+    const lg=ctx.createLinearGradient(0,-37,0,-8);
+    lg.addColorStop(0,"#4269b0");lg.addColorStop(1,"#1d3768");
+    ctx.strokeStyle=lg;ctx.lineWidth=9;ctx.lineCap="round";
+    ctx.beginPath();ctx.moveTo(-5,-10);ctx.lineTo(-7-stride,-32);ctx.moveTo(6,-10);ctx.lineTo(8+stride,-32);ctx.stroke();
 
-    // Red sweater — narrow side silhouette
-    const sweater = ctx.createLinearGradient(-8, -68, 12, -28);
-    sweater.addColorStop(0, '#ff4b43');
-    sweater.addColorStop(.55, '#d92727');
-    sweater.addColorStop(1, '#9f1717');
-    ctx.fillStyle = sweater;
-    ctx.beginPath();
-    ctx.roundRect(-11, -67, 24, 38, 8);
-    ctx.fill();
+    // body
+    const bg=ctx.createLinearGradient(-20,-78,18,-32);
+    bg.addColorStop(0,"#ff9a4c");bg.addColorStop(.45,"#ed642b");bg.addColorStop(1,"#a73a21");
+    ctx.fillStyle=bg;ctx.beginPath();ctx.roundRect(-17,-76,34,43,10);ctx.fill();
 
-    // Side profile: only one arm is visible; the opposite arm stays behind the torso.
-    ctx.strokeStyle = '#e7a47d';
-    ctx.lineWidth = 6;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(7, -57); ctx.lineTo(17, -43 - stride * .45); ctx.stroke();
+    // arm
+    const skin=ctx.createLinearGradient(-10,-75,24,-35);
+    skin.addColorStop(0,"#ffd4ae");skin.addColorStop(1,"#b9684c");
+    ctx.strokeStyle=skin;ctx.lineWidth=8;
+    ctx.beginPath();ctx.moveTo(10,-65);ctx.lineTo(21,-48);ctx.stroke();
 
-    // Neck
-    ctx.fillStyle = '#e7a47d';
-    ctx.fillRect(0, -77, 8, 11);
+    // neck + head
+    ctx.fillStyle=skin;ctx.fillRect(1,-87,10,13);
+    ctx.beginPath();ctx.arc(6,-101,19,0,TAU);ctx.fill();
 
-    // Small child's head in side profile, facing RIGHT
-    ctx.fillStyle = '#f1b08a';
-    ctx.beginPath(); ctx.arc(5, -91, 17, 0, TAU); ctx.fill();
+    // hair
+    ctx.fillStyle="#281c18";ctx.beginPath();ctx.arc(0,-111,15,Math.PI,TAU);ctx.fill();
 
-    // Hair, kept behind the forehead
-    ctx.fillStyle = '#2b1b16';
-    ctx.beginPath(); ctx.arc(1, -100, 17, Math.PI, TAU); ctx.fill();
-    ctx.beginPath(); ctx.arc(-9, -101, 6, Math.PI, TAU); ctx.fill();
-    ctx.beginPath(); ctx.arc(4, -105, 6, Math.PI, TAU); ctx.fill();
+    // red cap, volumetric
+    const cap=ctx.createLinearGradient(-15,-126,18,-100);
+    cap.addColorStop(0,"#ff5b52");cap.addColorStop(.45,"#e72e2e");cap.addColorStop(1,"#8e1717");
+    ctx.fillStyle=cap;ctx.beginPath();ctx.arc(3,-115,17,Math.PI,TAU);ctx.fill();
+    ctx.fillRect(-10,-116,26,7);
+    ctx.fillStyle="#a81c1c";ctx.beginPath();ctx.ellipse(21,-109,13,4,-.1,0,TAU);ctx.fill();
 
-    // One eye on the visible side + eyebrow
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(11, -92, 4.1, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#171717';
-    ctx.beginPath(); ctx.arc(12.5, -92, 1.7, 0, TAU); ctx.fill();
-    ctx.strokeStyle = '#4e2b22';
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(8, -98); ctx.lineTo(15, -99); ctx.stroke();
+    // face profile
+    ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(17,-101,4.5,0,TAU);ctx.fill();
+    ctx.fillStyle="#111";ctx.beginPath();ctx.arc(18,-101,2,0,TAU);ctx.fill();
+    ctx.fillStyle="#d88e6b";poly([[24,-99],[31,-95],[24,-93]],"#d88e6b");
+    ctx.strokeStyle="#8a4939";ctx.lineWidth=2;ctx.beginPath();ctx.arc(19,-91,5,.15,1.05);ctx.stroke();
 
-    // Nose projects forward: unmistakable side profile
-    ctx.fillStyle = '#cf805f';
-    ctx.beginPath();
-    ctx.moveTo(19, -90); ctx.lineTo(28, -86); ctx.lineTo(19, -83); ctx.closePath(); ctx.fill();
-
-    // Simple mouth; no sweat, no breathing effect
-    ctx.strokeStyle = '#78382f';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(17, -81, 4, 0.05, 1.0);
-    ctx.stroke();
-
-    // Red cap
-    ctx.fillStyle = '#c51f2a';
-    ctx.beginPath(); ctx.arc(5, -105, 15, Math.PI, TAU); ctx.fill();
-    ctx.fillRect(-7, -105, 23, 5);
-    ctx.fillStyle = '#8d1119';
-    ctx.beginPath(); ctx.ellipse(21, -101, 11, 3.2, -.08, 0, TAU); ctx.fill();
+    // rim light
+    ctx.strokeStyle="rgba(255,255,255,.20)";ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(6,-101,19,Math.PI*1.15,Math.PI*1.85);ctx.stroke();
 
     ctx.restore();
   }
