@@ -8016,43 +8016,43 @@ setLanguage(selectedLanguage);
   }
 
   function draw3DPlayer() {
-    // NEW CHILD CHARACTER: compact proportions, red sweater, black pants,
-    // sneakers, visible running dust, and frightened look-back when stopped.
+    // SMALL CHILD CHARACTER — visual replacement only.
+    // No sweat, no breathing/bobbing effect.
     const left = player.x - cameraX;
     const footY = player.y + player.height;
     const dir = player.direction < 0 ? -1 : 1;
-    const run = !!player.running && !!player.ground && Math.abs(player.vx) > 0.25;
-    const now = performance.now() * 0.001;
-    const faceDir = run ? dir : -dir; // stopped: look back at what is chasing him
-    const stride = run ? Math.sin(now * 13) * 5 : 0;
+    const moving = Math.abs(player.vx) > 0.25;
+    const run = !!player.running && !!player.ground && moving;
+    const faceDir = moving ? dir : -dir; // moving: face movement; stopped: look back
+    const stride = run ? Math.sin(performance.now() * 0.013) * 4 : 0;
 
     // Ground shadow
     ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,.22)';
+    ctx.fillStyle = 'rgba(0,0,0,.20)';
     ctx.beginPath();
-    ctx.ellipse(left + player.width / 2, footY + 1, 16, 4, 0, 0, TAU);
+    ctx.ellipse(left + player.width / 2, footY + 1, 12, 3.2, 0, 0, TAU);
     ctx.fill();
     ctx.restore();
 
-    // Clear, visible dust/footprints behind the child while running.
+    // Clear running footprints/dust
     if (run) {
       ctx.save();
       const trailDir = -dir;
-      for (let i = 0; i < 5; i++) {
-        const phase = (now * 7 + i * 1.7) % 4;
-        const px = left + player.width / 2 + trailDir * (15 + phase * 7 + i * 5);
-        const py = footY - 3 - (i % 2) * 2 - phase * 2;
-        const r = 2.2 + (i % 3) * 0.9;
-        ctx.fillStyle = 'rgba(205,190,165,' + (0.72 - phase * 0.10) + ')';
+      for (let i = 0; i < 4; i++) {
+        const phase = (performance.now() * 0.007 + i * 1.5) % 3;
+        const px = left + player.width / 2 + trailDir * (11 + phase * 5 + i * 4);
+        const py = footY - 2 - (i % 2) * 2 - phase * 1.5;
+        const r = 1.7 + (i % 2) * 0.8;
+        ctx.fillStyle = 'rgba(205,190,165,' + (0.78 - phase * 0.12) + ')';
         ctx.beginPath(); ctx.arc(px, py, r, 0, TAU); ctx.fill();
       }
       ctx.restore();
     }
 
-    // Draw a genuinely small child, anchored by the feet.
+    // Keep the character genuinely small while keeping the collision box unchanged.
     ctx.save();
     ctx.translate(left + player.width / 2, footY);
-    ctx.scale(faceDir, 1);
+    ctx.scale(faceDir * 0.68, 0.68);
 
     // Sneakers
     ctx.fillStyle = '#f5f5f5';
@@ -8062,7 +8062,7 @@ setLanguage(selectedLanguage);
     ctx.fillRect(-13 - stride, -2, 13, 2);
     ctx.fillRect(3 + stride, -2, 13, 2);
 
-    // Black pants - short child proportions
+    // Black pants
     ctx.strokeStyle = '#17191c';
     ctx.lineWidth = 8;
     ctx.lineCap = 'round';
@@ -8079,11 +8079,11 @@ setLanguage(selectedLanguage);
     ctx.fillStyle = sweater;
     ctx.beginPath(); ctx.roundRect(-16, -67, 32, 39, 9); ctx.fill();
 
-    // Sweater collar
+    // Collar
     ctx.fillStyle = '#8e1414';
     ctx.beginPath(); ctx.roundRect(-7, -68, 14, 7, 3); ctx.fill();
 
-    // Arms swing while running
+    // Arms
     ctx.strokeStyle = '#e7a47d';
     ctx.lineWidth = 7;
     ctx.beginPath();
@@ -8106,18 +8106,18 @@ setLanguage(selectedLanguage);
       ctx.beginPath(); ctx.arc(i, -104 + Math.abs(i) * .12, 5, 0, TAU); ctx.fill();
     }
 
-    // Face turned in movement direction; when stopped the whole child faces backward.
+    // Eyes and face point toward the actual movement direction.
     ctx.fillStyle = '#fff';
     ctx.beginPath(); ctx.arc(9, -90, 4.2, 0, TAU); ctx.fill();
     ctx.fillStyle = '#171717';
     ctx.beginPath(); ctx.arc(10, -90, 1.8, 0, TAU); ctx.fill();
 
-    // Small nose
+    // Nose
     ctx.fillStyle = '#cf805f';
     ctx.beginPath();
     ctx.moveTo(15, -88); ctx.lineTo(23, -85); ctx.lineTo(15, -82); ctx.closePath(); ctx.fill();
 
-    // Mouth: smile while running, frightened open mouth while stopped
+    // Mouth — no sweat and no breathing effect.
     ctx.strokeStyle = '#78382f';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -8125,17 +8125,7 @@ setLanguage(selectedLanguage);
     else ctx.arc(11, -80, 4.5, 0, TAU);
     ctx.stroke();
 
-    if (!run) {
-      // Frightened expression + sweat drop
-      ctx.fillStyle = '#fff';
-      ctx.beginPath(); ctx.arc(9, -90, 5, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#222';
-      ctx.beginPath(); ctx.arc(10, -91, 2, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#4ba8e8';
-      ctx.beginPath(); ctx.ellipse(20, -76, 2.2, 4.5, -.3, 0, TAU); ctx.fill();
-    }
-
-    // Subtle cap
+    // Red cap
     ctx.fillStyle = '#c51f2a';
     ctx.beginPath(); ctx.arc(0, -103, 15, Math.PI, TAU); ctx.fill();
     ctx.fillRect(-12, -103, 23, 5);
