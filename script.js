@@ -5903,8 +5903,8 @@ setLanguage(selectedLanguage);
     addonMainMenuButton.style.cssText = `
       position:fixed;
       right:14px;
-      top:14px;
-      bottom:auto;
+      top:auto;
+      bottom:14px;
       z-index:10020;
       padding:8px 12px;
       border:0;
@@ -8016,70 +8016,195 @@ setLanguage(selectedLanguage);
   }
 
   function draw3DPlayer() {
-    // IMPORTANT: use the collision box bottom as the exact foot line.
-    const left=player.x-cameraX;
-    const footY=player.y+player.height;
-    const dir=player.direction<0?-1:1;
-    const run=!!player.running && !!player.ground;
-    const tt=performance.now()*.022;
-    const stride=run?Math.sin(tt)*5:0;
+    // Small mischievous boy. The collision box remains untouched.
+    const left = player.x - cameraX;
+    const footY = player.y + player.height;
 
-    // Shadow sits exactly on the platform/floor.
+    // While moving, face the direction of travel. When stopped on the ground,
+    // look over the shoulder as if something behind him is chasing him.
+    const moving = Math.abs(player.vx) > 0.12;
+    const movingDir = player.vx < -0.12 ? -1 : 1;
+    const faceDir = moving ? movingDir : (player.direction || 1);
+    const lookBack = !moving && player.ground;
+
+    const now = performance.now() * 0.001;
+    const speed = Math.min(1, Math.abs(player.vx) / player.runSpeed);
+    const running = player.running && player.ground && speed > 0.15;
+    const walking = !running && moving && player.ground;
+    const cycle = now * (running ? 13 : 8);
+    const legSwing = (running || walking) ? Math.sin(cycle) * (running ? 8 : 5) : 0;
+    const armSwing = (running || walking) ? Math.sin(cycle + Math.PI) * (running ? 7 : 4) : 0;
+    const bob = (running || walking) ? Math.abs(Math.sin(cycle)) * 1.8 : 0;
+    const scaredBob = lookBack ? Math.sin(now * 7) * 1.1 : 0;
+
+    // Footprint/dust particles are visual only and do not affect gameplay.
+    if ((running || walking) && Math.abs(player.vx) > 1.2) {
+      if (!player._lastStepFx) player._lastStepFx = 0;
+      if (now - player._lastStepFx > (running ? 0.11 : 0.18)) {
+        player._lastStepFx = now;
+        player._stepFx = player._stepFx || [];
+        player._stepFx.push({
+          x: player.x + (faceDir < 0 ? player.width + 2 : -2),
+          y: footY - 2,
+          life: 0.42,
+          side: faceDir
+        });
+      }
+    }
+
+    if (player._stepFx) {
+      player._stepFx = player._stepFx.filter(p => {
+        p.life -= 1 / 60;
+        p.x -= p.side * 0.45;
+        p.y -= 0.18;
+        if (p.life <= 0) return false;
+        const a = Math.max(0, p.life / 0.42);
+        ctx.save();
+        ctx.globalAlpha = a * 0.45;
+        ctx.fillStyle = '#d9c39a';
+        ctx.beginPath();
+        ctx.ellipse(p.x - cameraX, p.y, 3.5 + (1 - a) * 3, 1.8 + (1 - a) * 2, 0, 0, TAU);
+        ctx.fill();
+        ctx.restore();
+        return true;
+      });
+    }
+
+    // Ground shadow.
     ctx.save();
-    ctx.fillStyle="rgba(0,0,0,.24)";
-    ctx.beginPath();ctx.ellipse(left+player.width/2,footY+1,18,4.5,0,0,TAU);ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,.22)';
+    ctx.beginPath();
+    ctx.ellipse(left + player.width / 2, footY + 1, 18, 4.5, 0, 0, TAU);
+    ctx.fill();
     ctx.restore();
 
-    // Character is drawn upward FROM footY, not from player.y.
     ctx.save();
-    ctx.translate(left+player.width/2,footY);
-    ctx.scale(dir,1);
+    ctx.translate(left + player.width / 2, footY - bob + scaredBob);
+    ctx.scale(faceDir, 1);
 
-    // shoes — their bottom is exactly footY
-    ctx.fillStyle="#14181c";
-    ctx.beginPath();ctx.roundRect(-13-stride, -8, 17, 8, 4);ctx.fill();
-    ctx.beginPath();ctx.roundRect(4+stride, -8, 17, 8, 4);ctx.fill();
+    // Body proportions: shorter legs, rounder head, child-like silhouette.
+    const skin = ctx.createLinearGradient(-10, -78, 20, -30);
+    skin.addColorStop(0, '#ffd8b7');
+    skin.addColorStop(1, '#bd7052');
 
-    // legs
-    const lg=ctx.createLinearGradient(0,-37,0,-8);
-    lg.addColorStop(0,"#4269b0");lg.addColorStop(1,"#1d3768");
-    ctx.strokeStyle=lg;ctx.lineWidth=9;ctx.lineCap="round";
-    ctx.beginPath();ctx.moveTo(-5,-10);ctx.lineTo(-7-stride,-32);ctx.moveTo(6,-10);ctx.lineTo(8+stride,-32);ctx.stroke();
+    const shirt = ctx.createLinearGradient(-18, -78, 18, -32);
+    shirt.addColorStop(0, '#5b91d6');
+    shirt.addColorStop(.55, '#3265a9');
+    shirt.addColorStop(1, '#1f3f72');
 
-    // body
-    const bg=ctx.createLinearGradient(-20,-78,18,-32);
-    bg.addColorStop(0,"#ff9a4c");bg.addColorStop(.45,"#ed642b");bg.addColorStop(1,"#a73a21");
-    ctx.fillStyle=bg;ctx.beginPath();ctx.roundRect(-17,-76,34,43,10);ctx.fill();
+    const shorts = ctx.createLinearGradient(0, -36, 0, -8);
+    shorts.addColorStop(0, '#394b72');
+    shorts.addColorStop(1, '#202c48');
 
-    // arm
-    const skin=ctx.createLinearGradient(-10,-75,24,-35);
-    skin.addColorStop(0,"#ffd4ae");skin.addColorStop(1,"#b9684c");
-    ctx.strokeStyle=skin;ctx.lineWidth=8;
-    ctx.beginPath();ctx.moveTo(10,-65);ctx.lineTo(21,-48);ctx.stroke();
+    // Shoes.
+    ctx.fillStyle = '#17191d';
+    ctx.beginPath(); ctx.roundRect(-14 - legSwing * .35, -7, 18, 8, 4); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(3 + legSwing * .35, -7, 18, 8, 4); ctx.fill();
 
-    // neck + head
-    ctx.fillStyle=skin;ctx.fillRect(1,-87,10,13);
-    ctx.beginPath();ctx.arc(6,-101,19,0,TAU);ctx.fill();
+    // Legs with clear running stride.
+    ctx.strokeStyle = '#315b9b';
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-7, -12);
+    ctx.lineTo(-9 - legSwing, -34);
+    ctx.moveTo(7, -12);
+    ctx.lineTo(9 + legSwing, -34);
+    ctx.stroke();
 
-    // hair
-    ctx.fillStyle="#281c18";ctx.beginPath();ctx.arc(0,-111,15,Math.PI,TAU);ctx.fill();
+    // Shorts.
+    ctx.fillStyle = shorts;
+    ctx.beginPath();
+    ctx.roundRect(-16, -42, 32, 16, 6);
+    ctx.fill();
 
-    // red cap, volumetric
-    const cap=ctx.createLinearGradient(-15,-126,18,-100);
-    cap.addColorStop(0,"#ff5b52");cap.addColorStop(.45,"#e72e2e");cap.addColorStop(1,"#8e1717");
-    ctx.fillStyle=cap;ctx.beginPath();ctx.arc(3,-115,17,Math.PI,TAU);ctx.fill();
-    ctx.fillRect(-10,-116,26,7);
-    ctx.fillStyle="#a81c1c";ctx.beginPath();ctx.ellipse(21,-109,13,4,-.1,0,TAU);ctx.fill();
+    // Shirt/body.
+    ctx.fillStyle = shirt;
+    ctx.beginPath();
+    ctx.roundRect(-17, -79, 34, 42, 10);
+    ctx.fill();
 
-    // face profile
-    ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(17,-101,4.5,0,TAU);ctx.fill();
-    ctx.fillStyle="#111";ctx.beginPath();ctx.arc(18,-101,2,0,TAU);ctx.fill();
-    ctx.fillStyle="#d88e6b";poly([[24,-99],[31,-95],[24,-93]],"#d88e6b");
-    ctx.strokeStyle="#8a4939";ctx.lineWidth=2;ctx.beginPath();ctx.arc(19,-91,5,.15,1.05);ctx.stroke();
+    // Back/forward arm swings.
+    ctx.strokeStyle = skin;
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(-12, -68);
+    ctx.lineTo(-20, -50 - armSwing);
+    ctx.moveTo(11, -67);
+    ctx.lineTo(20, -49 + armSwing);
+    ctx.stroke();
 
-    // rim light
-    ctx.strokeStyle="rgba(255,255,255,.20)";ctx.lineWidth=2;
-    ctx.beginPath();ctx.arc(6,-101,19,Math.PI*1.15,Math.PI*1.85);ctx.stroke();
+    // Neck.
+    ctx.fillStyle = skin;
+    ctx.fillRect(-5, -91, 11, 14);
+
+    // Large child-like head.
+    ctx.beginPath();
+    ctx.arc(2, -106, 20, 0, TAU);
+    ctx.fill();
+
+    // Hair.
+    ctx.fillStyle = '#2b1c18';
+    ctx.beginPath();
+    ctx.arc(-1, -116, 17, Math.PI, TAU);
+    ctx.fill();
+
+    // Red cap.
+    const cap = ctx.createLinearGradient(-16, -132, 18, -106);
+    cap.addColorStop(0, '#ff6258');
+    cap.addColorStop(.5, '#e52d2d');
+    cap.addColorStop(1, '#8d1717');
+    ctx.fillStyle = cap;
+    ctx.beginPath();
+    ctx.arc(1, -119, 18, Math.PI, TAU);
+    ctx.fill();
+    ctx.fillRect(-12, -120, 28, 7);
+    ctx.fillStyle = '#a71919';
+    ctx.beginPath();
+    ctx.ellipse(20, -113, 13, 4, -.08, 0, TAU);
+    ctx.fill();
+
+    // Face. When stopped, eyes shift backward to create the frightened look.
+    const eyeShift = lookBack ? -8 : 0;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(15 + eyeShift, -105, 5, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = '#111';
+    ctx.beginPath();
+    ctx.arc(14 + eyeShift, -105, 2.2, 0, TAU);
+    ctx.fill();
+
+    // Nose and expression.
+    ctx.fillStyle = '#d88e6b';
+    poly([[22, -103], [30, -99], [22, -97]], '#d88e6b');
+
+    ctx.strokeStyle = lookBack ? '#7f3e35' : '#8a4939';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    if (lookBack) {
+      // Small worried mouth.
+      ctx.arc(17, -93, 4.5, Math.PI + .15, TAU - .15);
+    } else {
+      ctx.arc(19, -93, 5, .15, 1.05);
+    }
+    ctx.stroke();
+
+    // A subtle worried brow when he stops.
+    if (lookBack) {
+      ctx.strokeStyle = '#6b3a32';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(8, -113);
+      ctx.lineTo(17, -115);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = 'rgba(255,255,255,.22)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(2, -106, 20, Math.PI * 1.15, Math.PI * 1.82);
+    ctx.stroke();
 
     ctx.restore();
   }
