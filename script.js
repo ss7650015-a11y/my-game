@@ -5696,64 +5696,6 @@ setLanguage(selectedLanguage);
     lastAddonLevel = currentLevel;
   }
 
-  // Independent shield pickup: every level, protects the player for 10 seconds.
-  let shieldPickup = null;
-  let shieldPickupLevel = null;
-
-  function resetShieldPickupForCurrentLevel() {
-    const shieldX = Math.max(900, currentLevelWidth * 0.62);
-    let platformUnder = null;
-    if (Array.isArray(platforms)) {
-      let best = Infinity;
-      for (const p of platforms) {
-        if (p.x < shieldX + 120 && p.x + p.width > shieldX - 120) {
-          const d = Math.abs((p.x + p.width / 2) - shieldX);
-          if (d < best) { best = d; platformUnder = p; }
-        }
-      }
-    }
-    shieldPickup = {
-      x: shieldX,
-      y: platformUnder ? platformUnder.y - 38 : 420,
-      width: 34, height: 34, collected: false
-    };
-    shieldPickupLevel = currentLevel;
-  }
-
-  function shieldPickupCollision() {
-    if (!shieldPickup || shieldPickup.collected) return;
-    if (
-      player.x < shieldPickup.x + shieldPickup.width &&
-      player.x + player.width > shieldPickup.x &&
-      player.y < shieldPickup.y + shieldPickup.height &&
-      player.y + player.height > shieldPickup.y
-    ) {
-      shieldPickup.collected = true;
-      expansion.invincibleUntil = Date.now() + 10000;
-      expansion.shield = 0;
-      announce(languageText() ? '🛡️ Shield active for 10 seconds!' : '🛡️ الدرع يحميك لمدة 10 ثواني!');
-      updateHud();
-      if (typeof soundCoin === 'function') soundCoin();
-    }
-  }
-
-  function drawShieldPickup() {
-    if (!shieldPickup || shieldPickup.collected) return;
-    const x = shieldPickup.x - cameraX;
-    if (x < -80 || x > canvas.width + 80) return;
-    const pulse = 1 + Math.sin(performance.now() * 0.006) * 0.06;
-    ctx.save();
-    ctx.translate(x, shieldPickup.y + shieldPickup.height / 2);
-    ctx.scale(pulse, pulse);
-    ctx.font = '30px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(80,180,255,.9)';
-    ctx.shadowBlur = 14;
-    ctx.fillText('🛡️', 0, 0);
-    ctx.restore();
-  }
-
   function laserPickupCollision() {
     if (!laserPickup || laserPickup.collected) return;
 
@@ -5811,7 +5753,6 @@ setLanguage(selectedLanguage);
     if (!gameRunning) return;
 
     laserPickupCollision();
-    shieldPickupCollision();
 
     for (let i = laserBolts.length - 1; i >= 0; i--) {
 
@@ -6109,7 +6050,6 @@ setLanguage(selectedLanguage);
     );
 
     resetLaserForCurrentLevel();
-      resetShieldPickupForCurrentLevel();
   };
 
   // Keyboard laser: F or X.
@@ -6138,7 +6078,6 @@ setLanguage(selectedLanguage);
         currentLevel !== lastAddonLevel
       ) {
         resetLaserForCurrentLevel();
-      resetShieldPickupForCurrentLevel();
       }
 
       updateLaser();
@@ -6154,7 +6093,6 @@ setLanguage(selectedLanguage);
 
   // The first level has already been loaded by the stable game.
   resetLaserForCurrentLevel();
-      resetShieldPickupForCurrentLevel();
 
   // Keep the main-menu button available whenever gameplay is active.
   // This only creates the existing button; it does not alter the game loop.
@@ -6617,7 +6555,6 @@ setLanguage(selectedLanguage);
     const wrappedDraw = function(...args) {
       const result = originalDraw.apply(this, args);
       drawExtras();
-    drawShieldPickup();
       return result;
     };
     wrappedDraw.__expWrapped = true;
