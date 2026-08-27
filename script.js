@@ -8023,7 +8023,7 @@ setLanguage(selectedLanguage);
     const dir = player.direction < 0 ? -1 : 1;
     const moving = Math.abs(player.vx) > 0.25;
     const run = !!player.running && !!player.ground && moving;
-    const faceDir = moving ? dir : -dir; // moving: face movement; stopped: look back
+    const faceDir = dir; // always face the direction of the path; never look backward
     const stride = run ? Math.sin(performance.now() * 0.013) * 4 : 0;
 
     // Ground shadow
