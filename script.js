@@ -927,6 +927,48 @@ function updateSoundButton() {
 
 const keys = {};
 
+// ============================================================
+// XBOX / GAMEPAD SUPPORT
+// Xbox controllers use the standard browser Gamepad API mapping:
+// Left Stick = move, A = jump, RT = run, X = laser.
+// ============================================================
+let activeGamepad = null;
+let gamepadPrevFire = false;
+
+function pollGamepad() {
+  if (!navigator.getGamepads) return;
+  const pads = navigator.getGamepads();
+  activeGamepad = null;
+  for (const pad of pads) {
+    if (pad && pad.connected) { activeGamepad = pad; break; }
+  }
+  if (!activeGamepad) {
+    keys.__gpLeft = false;
+    keys.__gpRight = false;
+    keys.__gpJump = false;
+    keys.__gpRun = false;
+    gamepadPrevFire = false;
+    return;
+  }
+
+  const axis = Number(activeGamepad.axes?.[0] || 0);
+  const dead = 0.22;
+  keys.__gpLeft = axis < -dead;
+  keys.__gpRight = axis > dead;
+  keys.__gpJump = !!activeGamepad.buttons?.[0]?.pressed; // A
+  keys.__gpRun = !!activeGamepad.buttons?.[7]?.pressed;  // RT
+
+  // X button fires once per press, matching the keyboard F/X behavior.
+  const fireNow = !!activeGamepad.buttons?.[2]?.pressed; // X
+  if (fireNow && !gamepadPrevFire) {
+    document.dispatchEvent(new KeyboardEvent("keydown", {key:"x", code:"KeyX", bubbles:true}));
+  }
+  gamepadPrevFire = fireNow;
+}
+
+window.addEventListener("gamepadconnected", e => { activeGamepad = e.gamepad; });
+window.addEventListener("gamepaddisconnected", () => { activeGamepad = null; });
+
 document.addEventListener(
   "keydown",
   e => {
@@ -1383,6 +1425,12 @@ function loadLevel(number, snapshotProgress = true) {
 
   player.running = false;
 
+  // A normal level load starts from the beginning. resetCurrentLevel() passes false
+  // so a life-loss respawn can preserve the checkpoint near the death location.
+  if (snapshotProgress !== false) {
+    respawnCheckpointX = 100;
+    respawnCheckpointY = 400;
+  }
 
   cameraX = 0;
 
@@ -1453,20 +1501,19 @@ function updatePlayerCore() {
 
   const movingRight =
     keys["arrowright"] ||
-    keys["d"];
+    keys["d"] ||
+    keys.__gpRight;
 
 
   const movingLeft =
     keys["arrowleft"] ||
-    keys["a"];
+    keys["a"] ||
+    keys.__gpLeft;
 
 
   const running =
-    keys["shift"] &&
-    (
-      movingRight ||
-      movingLeft
-    );
+    (keys["shift"] || keys.__gpRun) &&
+    (movingRight || movingLeft);
 
 
   player.running =
@@ -1572,7 +1619,8 @@ function updatePlayerCore() {
   const jumpPressed =
     keys["arrowup"] ||
     keys["w"] ||
-    keys[" "];
+    keys[" "] ||
+    keys.__gpJump;
 
 
   if (
@@ -2144,11 +2192,34 @@ function checkGoal() {
 
 
 // ============================================================
+// PERSIST COMPLETED STAGE
+// ============================================================
+function saveCompletedStage(stageNumber) {
+  try {
+    const key = "naughtyBoySaveV3";
+    const old = JSON.parse(localStorage.getItem(key) || "{}");
+    const completed = Math.max(Number(old.completedLevel || 0), stageNumber);
+    const resumeLevel = Math.min(TOTAL_LEVELS, Math.max(Number(old.level || 1), stageNumber < TOTAL_LEVELS ? stageNumber + 1 : TOTAL_LEVELS));
+    const data = {
+      ...old,
+      level: resumeLevel,
+      completedLevel: completed,
+      score: Number(score || 0),
+      coins: Number(coins || 0),
+      stars: old.stars || {}
+    };
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (_) {}
+}
+
+// ============================================================
 // NEXT LEVEL
 // ============================================================
 
 function nextLevel() {
 
+  // Save immediately when the current stage is completed.
+  saveCompletedStage(currentLevel);
   smartAwardStars();
 
   if (
@@ -2274,8 +2345,18 @@ function nextLevel() {
 
 
 // ============================================================
-// PLAYER DEATH
+// PLAYER DEATH / CHECKPOINT RESPAWN
 // ============================================================
+let respawnCheckpointX = 100;
+let respawnCheckpointY = 400;
+
+function setRespawnCheckpointFromDeath() {
+  // Keep the respawn close to the place of death, but slightly behind
+  // the player so an enemy cannot immediately trigger the same hit.
+  const back = player.direction >= 0 ? -110 : 110;
+  respawnCheckpointX = Math.max(100, player.x + back);
+  respawnCheckpointY = Math.max(0, Math.min(520, player.y));
+}
 
 function playerDied() {
 
@@ -2288,6 +2369,8 @@ function playerDied() {
     return;
   }
 
+
+  setRespawnCheckpointFromDeath();
 
   stopGame();
 
@@ -2365,6 +2448,13 @@ function resetCurrentLevel() {
 
   loadLevel(currentLevel, false);
 
+  // Respawn at the latest death/checkpoint location while preserving the level.
+  player.x = Math.max(100, Math.min(currentLevelWidth - player.width - 20, respawnCheckpointX));
+  player.y = Math.max(0, Math.min(520, respawnCheckpointY));
+  player.vx = 0;
+  player.vy = 0;
+  player.ground = false;
+
   lives = savedLives;
 
   updateHUD();
@@ -2396,6 +2486,8 @@ function restartGame() {
 
     gameOver = false;
 
+    respawnCheckpointX = 100;
+    respawnCheckpointY = 400;
     resetCurrentLevel();
   }
 
@@ -2420,6 +2512,8 @@ function restartGame() {
 
     gameOver = false;
 
+    respawnCheckpointX = 100;
+    respawnCheckpointY = 400;
     resetCurrentLevel();
   }
 
@@ -2432,6 +2526,8 @@ function restartGame() {
 
     gameOver = false;
 
+    respawnCheckpointX = 100;
+    respawnCheckpointY = 400;
     resetCurrentLevel();
   }
 
@@ -5133,6 +5229,8 @@ function stopGame() {
 // ============================================================
 
 function loop() {
+
+  pollGamepad();
 
   if (
     !gameRunning
