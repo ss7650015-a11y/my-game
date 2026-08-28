@@ -5690,6 +5690,21 @@ setLanguage(selectedLanguage);
     }
   }
 
+  // Expose the stable laser engine to the shop layer. The shop and the
+  // original laser pickup live in separate closures, so they must communicate
+  // through this small, explicit bridge instead of touching private variables.
+  window.__shopLaserAddShots = function(amount) {
+    laserShots = Math.max(0, Number(laserShots || 0) + Number(amount || 0));
+    return laserShots;
+  };
+  window.__shopLaserGetShots = function() {
+    return Math.max(0, Number(laserShots || 0));
+  };
+  window.__shopLaserFire = function() {
+    fireLaser();
+    return Math.max(0, Number(laserShots || 0));
+  };
+
   function fireLaser() {
     if (
       !gameRunning ||
@@ -6345,28 +6360,28 @@ setLanguage(selectedLanguage);
     if(!type) return;
 
     if(type==='laser'){
-      // Purchased laser packs are real ammunition. Each use-button press
-      // fires one bolt through the same bolt array used by the laser system.
-      if(Number(laserShots||0)<=0){
-        if(Number(expansion.laserPacks||0)<=0){
-          expansion.activeItem=null;
+      // Use the real laser engine from the original laser add-on.
+      // A pack is converted into 5 real shots only when the current magazine is empty.
+      if (!gameRunning || gameOver || gameWon) return;
+      let shots = typeof window.__shopLaserGetShots === 'function'
+        ? window.__shopLaserGetShots() : 0;
+      if (shots <= 0) {
+        if (Number(expansion.laserPacks || 0) <= 0) {
+          expansion.activeItem = null;
           updateUseButton();
+          saveShopState();
           return;
         }
         expansion.laserPacks--;
-        laserShots=5;
+        shots = typeof window.__shopLaserAddShots === 'function'
+          ? window.__shopLaserAddShots(5) : 0;
       }
-
-      if (!gameRunning || gameOver || gameWon) return;
-      const direction = (typeof player.direction === 'number' && player.direction < 0) ? -1 : 1;
-      laserShots--;
-      laserBolts.push({
-        x: player.x + (direction > 0 ? player.width - 2 : -16),
-        y: player.y + Math.max(8, player.height * 0.38),
-        width: 18, height: 6, vx: direction * 13, life: 70
-      });
-      if (typeof playTone === 'function') playTone(620, 0.07, 'square', 0.08, 180);
-      if(Number(laserShots||0)<=0 && Number(expansion.laserPacks||0)<=0) expansion.activeItem=null;
+      if (typeof window.__shopLaserFire === 'function') {
+        window.__shopLaserFire();
+      }
+      shots = typeof window.__shopLaserGetShots === 'function'
+        ? window.__shopLaserGetShots() : 0;
+      if (shots <= 0 && Number(expansion.laserPacks || 0) <= 0) expansion.activeItem = null;
       saveShopState();
       updateUseButton();
       return;
@@ -6397,6 +6412,7 @@ setLanguage(selectedLanguage);
     if((type==='shield'&&expansion.shield<=0)||(type==='flight'&&expansion.flightPacks<=0)||(type==='invisibility'&&expansion.invisibilityPacks<=0)) expansion.activeItem=null;
     saveShopState();
     updateUseButton();
+    updatePowerTimer();
     announce(type==='flight' ? t('✈️ الطيران مفعل لمدة 10 ثوانٍ!','✈️ Flight active for 10 seconds!') : t('تم استخدام العنصر!','Item used!'));
   }
 
@@ -6616,8 +6632,8 @@ setLanguage(selectedLanguage);
       if (near && typeof laserBolts !== "undefined") {
         for (let i = laserBolts.length - 1; i >= 0; i--) {
           const bolt = laserBolts[i];
-          if (bolt.x < b.x + b.w && bolt.x + bolt.w > b.x &&
-              bolt.y < b.y + b.h && bolt.y + bolt.h > b.y) {
+          if (bolt.x < b.x + b.w && bolt.x + (bolt.width || 0) > b.x &&
+              bolt.y < b.y + b.h && bolt.y + (bolt.height || 0) > b.y) {
             b.hp--;
             laserBolts.splice(i, 1);
             if (b.hp <= 0) {
@@ -6707,10 +6723,21 @@ setLanguage(selectedLanguage);
   loadShopState();
   ensureTopButtons();
 
+  // Keep the use button and active-power timer responsive independently of the
+  // game's render loop. This also guarantees the countdown remains visible.
+  setInterval(() => {
+    if (typeof gameRunning !== 'undefined' && gameRunning) {
+      updateUseButton();
+      updatePowerTimer();
+    }
+  }, 100);
+
   // Start extras after the original game has initialized.
   setTimeout(() => {
     resetStageExtras();
     updateShopText();
+    updateUseButton();
+    updatePowerTimer();
   }, 250);
 })();
 
