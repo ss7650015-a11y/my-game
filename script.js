@@ -2371,6 +2371,17 @@ function playerDied(reason = "enemy") {
 
   if (gameOver || gameWon || changingLevel) return;
   if (Date.now() < damageInvulnerableUntil) return;
+  if (typeof expansion !== "undefined") {
+    if (Date.now() < (expansion.invisibilityUntil || 0) || Date.now() < (expansion.invincibleUntil || 0)) return;
+    if (Number(expansion.shield || 0) > 0) {
+      expansion.shield--;
+      expansion.activeItem = expansion.shield > 0 ? "shield" : (expansion.laserPacks > 0 ? "laser" : (expansion.starPacks > 0 ? "star" : (expansion.invisibilityPacks > 0 ? "invisibility" : null)));
+      damageInvulnerableUntil = Date.now() + 900;
+      if (typeof saveShopState === "function") saveShopState();
+      if (typeof updateUseButton === "function") updateUseButton();
+      updateHUD(); soundDamage(); return;
+    }
+  }
 
   // Losing a heart no longer resets/reloads the level. The player keeps
   // playing from the exact position where the hit happened.
@@ -6069,9 +6080,9 @@ setLanguage(selectedLanguage);
   const SAVE_KEY = "naughtyBoySaveV3";
   const shop = {
     shield: 25,
-    speed: 40,
-    jump: 40,
-    laser: 30
+    laser: 30,
+    star: 35,
+    invisibility: 45
   };
 
   let lastCompletionSavedLevel = 0;
@@ -6082,7 +6093,12 @@ setLanguage(selectedLanguage);
     stageStartTime: 0,
     bonusCoins: 0,
     shield: 0,
+    laserPacks: 0,
+    starPacks: 0,
+    invisibilityPacks: 0,
+    activeItem: null,
     invincibleUntil: 0,
+    invisibilityUntil: 0,
     speedUntil: 0,
     jumpUntil: 0,
     powerUp: null,
@@ -6196,6 +6212,14 @@ setLanguage(selectedLanguage);
         width:100%;margin:6px 0;padding:11px;border:0;border-radius:12px;
         font-weight:800;cursor:pointer;
       }
+      #nbStoreButton, #nbUseButton {
+        position:fixed;top:12px;z-index:10002;width:48px;height:48px;border:0;border-radius:14px;
+        background:rgba(15,20,30,.86);color:#fff;font-size:24px;cursor:pointer;
+        box-shadow:0 4px 14px rgba(0,0,0,.28);
+      }
+      #nbStoreButton { right:72px; }
+      #nbUseButton { right:126px; display:none; }
+      @media(max-width:700px){ #nbStoreButton{right:68px} #nbUseButton{right:122px} }
       .expansionTouch {
         position:fixed;bottom:70px;z-index:9999;border:0;border-radius:50%;
         width:48px;height:48px;font-size:20px;background:rgba(20,25,35,.82);
@@ -6216,8 +6240,67 @@ setLanguage(selectedLanguage);
     document.body.appendChild(hud);
   }
 
+  function getWallet() { return getCoins(); }
+
+  function saveShopState() {
+    try {
+      const data = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}");
+      data.shopInventory = { shield: expansion.shield, laser: expansion.laserPacks, star: expansion.starPacks, invisibility: expansion.invisibilityPacks };
+      data.shopActive = expansion.activeItem;
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    } catch (_) {}
+  }
+
+  function loadShopState() {
+    try {
+      const data = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}");
+      const inv = data.shopInventory || {};
+      expansion.shield = Number(inv.shield || data.shield || 0);
+      expansion.laserPacks = Number(inv.laser || 0);
+      expansion.starPacks = Number(inv.star || 0);
+      expansion.invisibilityPacks = Number(inv.invisibility || 0);
+      expansion.activeItem = data.shopActive || null;
+    } catch (_) {}
+  }
+
+  function ensureTopButtons() {
+    if (!document.getElementById('nbStoreButton')) {
+      const b = document.createElement('button'); b.id='nbStoreButton'; b.type='button'; b.textContent='🛒'; b.title=t('المتجر','Shop');
+      b.onclick=()=>{ try{initAudio();}catch(_){} openShop(); }; document.body.appendChild(b);
+    }
+    if (!document.getElementById('nbUseButton')) {
+      const b = document.createElement('button'); b.id='nbUseButton'; b.type='button'; b.title=t('استخدام العنصر','Use item');
+      b.onclick=()=>useActiveItem(); document.body.appendChild(b);
+    }
+    updateUseButton();
+  }
+
+  function updateUseButton() {
+    const b=document.getElementById('nbUseButton'); if(!b) return;
+    const icons={shield:'🛡️',laser:'🔫',star:'⭐',invisibility:'👻'};
+    const counts={shield:expansion.shield,laser:expansion.laserPacks,star:expansion.starPacks,invisibility:expansion.invisibilityPacks};
+    const active=expansion.activeItem && counts[expansion.activeItem]>0 ? expansion.activeItem : null;
+    b.style.display=(typeof gameRunning!=='undefined' && gameRunning && active)?'block':'none';
+    b.textContent=active?icons[active]:'🎒';
+    b.title=active?t('استخدام '+icons[active],'Use '+icons[active]):t('لا يوجد عنصر','No item');
+  }
+
+  function useActiveItem() {
+    const type=expansion.activeItem; if(!type) return;
+    const count=type==='shield'?expansion.shield:type==='laser'?expansion.laserPacks:type==='star'?expansion.starPacks:expansion.invisibilityPacks;
+    if(count<=0){ expansion.activeItem=null; updateUseButton(); return; }
+    if(type==='shield'){ expansion.invincibleUntil=Math.max(expansion.invincibleUntil,Date.now()+10000); expansion.shield--; }
+    if(type==='laser'){ if(typeof laserShots!=='undefined') laserShots=Math.min(5,Number(laserShots||0)+5); expansion.laserPacks--; }
+    if(type==='star'){ expansion.invincibleUntil=Math.max(expansion.invincibleUntil,Date.now()+10000); expansion.starPacks--; }
+    if(type==='invisibility'){ expansion.invisibilityUntil=Date.now()+5000; expansion.invisibilityPacks--; }
+    if((type==='shield'&&expansion.shield<=0)||(type==='laser'&&expansion.laserPacks<=0)||(type==='star'&&expansion.starPacks<=0)||(type==='invisibility'&&expansion.invisibilityPacks<=0)) expansion.activeItem=null;
+    saveShopState(); updateUseButton();
+    announce(t('تم استخدام العنصر!','Item used!'));
+  }
+
   function addShop() {
     if (document.getElementById("expansionShop")) return;
+    ensureTopButtons();
     const wrap = document.createElement("div");
     wrap.id = "expansionShop";
     wrap.innerHTML = `
@@ -6225,58 +6308,42 @@ setLanguage(selectedLanguage);
         <h2 id="shopTitle"></h2>
         <p id="shopCoins"></p>
         <button data-buy="shield"></button>
-        <button data-buy="speed"></button>
-        <button data-buy="jump"></button>
         <button data-buy="laser"></button>
+        <button data-buy="star"></button>
+        <button data-buy="invisibility"></button>
         <button data-close></button>
       </div>`;
     document.body.appendChild(wrap);
-
     wrap.querySelector("[data-close]").onclick = () => wrap.style.display = "none";
     wrap.querySelectorAll("[data-buy]").forEach(btn => {
       btn.onclick = () => {
-        const type = btn.dataset.buy;
-        const cost = shop[type];
-        let data = {};
-        try { data = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}"); } catch (_) {}
-        const wallet = Number(data.shopCoins || 0);
-        if (wallet < cost) {
-          announce(t("العملات غير كافية", "Not enough coins"));
-          return;
-        }
-        data.shopCoins = wallet - cost;
-        if (type === "shield") expansion.shield++;
-        if (type === "speed") expansion.speedUntil = Date.now() + 15000;
-        if (type === "jump") expansion.jumpUntil = Date.now() + 15000;
-        if (type === "laser") {
-          if (typeof laserShots !== "undefined") laserShots += 5;
-        }
-        localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-        updateShopText();
-        updateHud();
-        announce(t("تم الشراء!", "Purchased!"));
+        const type=btn.dataset.buy, cost=shop[type];
+        if(getWallet()<cost){ announce(t("العملات غير كافية","Not enough coins")); return; }
+        coins-=cost;
+        if(type==='shield') expansion.shield++;
+        if(type==='laser') expansion.laserPacks++;
+        if(type==='star') expansion.starPacks++;
+        if(type==='invisibility') expansion.invisibilityPacks++;
+        expansion.activeItem=type;
+        updateHUD(); saveShopState(); updateShopText(); updateUseButton();
+        announce(t("تم الشراء! اضغط زر الاستخدام 🛒","Purchased! Press the use button."));
       };
     });
     updateShopText();
   }
 
   function updateShopText() {
-    const box = document.getElementById("expansionShop");
-    if (!box) return;
-    box.querySelector("#shopTitle").textContent = t("🛒 المتجر", "🛒 Shop");
-    let data = {};
-    try { data = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}"); } catch (_) {}
-    const wallet = Number(data.shopCoins || 0);
-    box.querySelector("#shopCoins").textContent =
-      t(`عملات المتجر: ${wallet}`, `Shop coins: ${wallet}`);
-    const labels = {
-      shield: t("🛡️ درع — 25 عملة", "🛡️ Shield — 25 coins"),
-      speed: t("🏃 سرعة — 40 عملة", "🏃 Speed — 40 coins"),
-      jump: t("🦘 قفزة — 40 عملة", "🦘 Jump — 40 coins"),
-      laser: t("🔫 5 طلقات ليزر — 30 عملة", "🔫 5 Laser shots — 30 coins")
+    const box=document.getElementById("expansionShop"); if(!box) return;
+    box.querySelector("#shopTitle").textContent=t("🛒 المتجر","🛒 Shop");
+    box.querySelector("#shopCoins").textContent=t(`عملاتك: ${getWallet()}`,`Your coins: ${getWallet()}`);
+    const labels={
+      shield:t("🛡️ درع 10 ثوانٍ — 25 عملة","🛡️ Shield 10s — 25 coins"),
+      laser:t("🔫 5 طلقات ليزر — 30 عملة","🔫 5 Laser shots — 30 coins"),
+      star:t("⭐ نجمة حماية 10 ثوانٍ — 35 عملة","⭐ Star protection 10s — 35 coins"),
+      invisibility:t("👻 اختفاء 5 ثوانٍ — 45 عملة","👻 Invisibility 5s — 45 coins")
     };
-    box.querySelectorAll("[data-buy]").forEach(b => b.textContent = labels[b.dataset.buy]);
-    box.querySelector("[data-close]").textContent = t("إغلاق", "Close");
+    box.querySelectorAll("[data-buy]").forEach(b=>b.textContent=labels[b.dataset.buy]);
+    box.querySelector("[data-close]").textContent=t("إغلاق","Close");
   }
 
   function openShop() {
@@ -6296,6 +6363,7 @@ setLanguage(selectedLanguage);
     const shield = document.getElementById("expShield");
     if (stars) stars.textContent = `⭐ ${expansion.stageStars}`;
     if (shield) shield.textContent = `🛡️ ${expansion.shield}`;
+    updateUseButton();
   }
 
   function resetStageExtras() {
@@ -6364,6 +6432,11 @@ setLanguage(selectedLanguage);
       ctx.restore();
     }
 
+    if (Date.now() < (expansion.invisibilityUntil || 0)) {
+      ctx.save(); ctx.globalAlpha=0.28; ctx.fillStyle='#b8eaff';
+      ctx.beginPath(); ctx.arc((player.x-cameraX)+player.width/2, player.y+player.height/2, 30, 0, Math.PI*2); ctx.fill(); ctx.restore();
+    }
+
     const b = expansion.boss;
     if (b && b.active) {
       const x = b.x - cameraX;
@@ -6412,6 +6485,11 @@ setLanguage(selectedLanguage);
         expansion.bonusCoins += 10;
         announce(t("💎 منطقة سرية! +10 عملات", "💎 Secret area! +10 coins"));
       }
+    }
+
+    if (Date.now() < (expansion.invisibilityUntil || 0)) {
+      ctx.save(); ctx.globalAlpha=0.28; ctx.fillStyle='#b8eaff';
+      ctx.beginPath(); ctx.arc((player.x-cameraX)+player.width/2, player.y+player.height/2, 30, 0, Math.PI*2); ctx.fill(); ctx.restore();
     }
 
     const b = expansion.boss;
@@ -6480,7 +6558,8 @@ setLanguage(selectedLanguage);
 
   // Input: P opens shop, and S can activate a temporary star in-game.
   document.addEventListener("keydown", e => {
-    if (e.key === "p" || e.key === "P") openShop();
+    if (e.key === "p" || e.key === "P") { if (typeof gameRunning !== 'undefined' && gameRunning) openShop(); }
+    if (e.key === "e" || e.key === "E") useActiveItem();
     if (e.key === "s" || e.key === "S") {
       if (typeof gameRunning !== "undefined" && gameRunning) {
         expansion.invincibleUntil = Date.now() + 12000;
@@ -6516,6 +6595,8 @@ setLanguage(selectedLanguage);
   addHud();
   addShop();
   loadProgress();
+  loadShopState();
+  ensureTopButtons();
 
   // Start extras after the original game has initialized.
   setTimeout(() => {
