@@ -50,7 +50,7 @@ window.addEventListener("resize", resizeCanvas);
 // GAME VARIABLES
 // ============================================================
 
-const TOTAL_LEVELS = 30;
+const TOTAL_LEVELS = 45;
 
 let score = 0;
 let coins = 0;
@@ -1214,13 +1214,13 @@ function createLevel(number) {
 
   // Difficulty: exactly 40% on level 1 -> 100% on level 15.
   const difficulty =
-    0.40 + (number - 1) * (0.60 / 29);
+    0.40 + (number - 1) * (0.60 / 44);
 
   // Stages are calibrated for about one minute of continuous running.
   // At run speed 7.5 px/frame and 60 FPS, 30,000 px is about 67 seconds.
   // A small increase per stage keeps later stages slightly longer.
   const width =
-    30000 + (number - 1) * 120;
+    13500 + (number - 1) * 60;
 
   const gap =
     Math.max(72, 155 - difficulty * 65);
@@ -1468,7 +1468,7 @@ function updateHUD() {
 
   if (levelElement)
     levelElement.textContent =
-      currentLevel + " / 30";
+      currentLevel + " / 45";
 }
 
 
@@ -2262,7 +2262,7 @@ function nextLevel() {
 
 
     messageText.textContent =
-      "لقد أنهيت جميع المراحل الـ30!";
+      "لقد أنهيت جميع المراحل الـ45!";
 
 
     restartButton.textContent =
@@ -2370,9 +2370,12 @@ function setRespawnCheckpointFromDeath() {
 function playerDied(reason = "enemy") {
 
   if (gameOver || gameWon || changingLevel) return;
-  if (Date.now() < damageInvulnerableUntil) return;
+  const now = Date.now();
+  // Active timed protection always wins over enemy/hazard damage.
+  if (typeof expansion !== "undefined" && now < Number(expansion.invincibleUntil || 0)) return;
+  if (now < damageInvulnerableUntil) return;
   if (typeof expansion !== "undefined") {
-    if (Date.now() < (expansion.invisibilityUntil || 0) || Date.now() < (expansion.invincibleUntil || 0)) return;
+    if (now < Number(expansion.invisibilityUntil || 0)) return;
     if (Number(expansion.shield || 0) > 0) {
       expansion.shield--;
       expansion.activeItem = expansion.shield > 0 ? "shield" : (expansion.laserPacks > 0 ? "laser" : (expansion.flightPacks > 0 ? "flight" : (expansion.invisibilityPacks > 0 ? "invisibility" : null)));
@@ -5448,7 +5451,7 @@ function initStartScreen() {
     <button class="load-btn" style="display:block;width:100%;margin-top:18px;padding:17px 20px;border:0;border-radius:16px;background:#2980b9;color:#fff;font-size:24px;font-weight:800;cursor:pointer;box-shadow:0 8px 0 #1b4f72">▶ تحميل الحفظ</button>
     <button class="settings-btn" style="display:block;width:100%;margin-top:18px;padding:17px 20px;border:0;border-radius:16px;background:#27ae60;color:#fff;font-size:24px;font-weight:800;cursor:pointer;box-shadow:0 8px 0 #176b3a">${menuText[selectedLanguage].settings}</button>
     <button class="exit-btn" style="display:block;width:100%;margin-top:18px;padding:17px 20px;border:0;border-radius:16px;background:#c0392b;color:#fff;font-size:24px;font-weight:800;cursor:pointer;box-shadow:0 8px 0 #7f241b">${menuText[selectedLanguage].exit}</button>
-    <div style="margin-top:18px;font-size:13px;opacity:.75">30 مراحل • 7 حيوانات • 3 أرواح</div>
+    <div style="margin-top:18px;font-size:13px;opacity:.75">45 مراحل • 7 حيوانات • 3 أرواح</div>
     <div style="margin-top:8px;font-size:12px;opacity:.6">الصعوبة تبدأ من 40% وتصل إلى 100%</div>
   `;
 
@@ -5582,7 +5585,7 @@ setLanguage(selectedLanguage);
 
   function applyLevelText() {
     if (typeof levelElement !== "undefined" && levelElement) {
-      levelElement.textContent = currentLevel + " / 30";
+      levelElement.textContent = currentLevel + " / 45";
     }
     cleanLevelLabel(document.body);
   }
@@ -6127,7 +6130,7 @@ setLanguage(selectedLanguage);
   }
 
   function getStage() {
-    return Math.max(1, Math.min(30, Number(
+    return Math.max(1, Math.min(45, Number(
       typeof currentLevel !== "undefined" ? currentLevel : 1
     ) || 1));
   }
@@ -6173,7 +6176,7 @@ setLanguage(selectedLanguage);
   }
 
   function stageDifficulty() {
-    return 0.40 + ((getStage() - 1) / 29) * 0.60;
+    return 0.40 + ((getStage() - 1) / 44) * 0.60;
   }
 
   function announce(text) {
@@ -6199,6 +6202,7 @@ setLanguage(selectedLanguage);
     const style = document.createElement("style");
     style.id = "expansionStyle";
     style.textContent = `
+      #score{display:none!important;}
       #expansionHud {
         position:fixed;left:12px;top:112px;z-index:9998;
         display:flex;gap:7px;flex-wrap:wrap;max-width:48%;
@@ -6246,8 +6250,8 @@ setLanguage(selectedLanguage);
       }
       #expansionShop button[data-buy]:hover { filter:brightness(.97); transform:translateY(-1px); }
       #expansionShop button[data-close] { background:#263238; color:#fff; font-size:16px; }
-      @media(max-width:700px){ #nbStoreButton{right:68px} #nbUseButton{right:122px} #nbPowerTimer{right:178px;top:20px} }
-      @media(min-width:701px){ #nbPowerTimer{right:188px;top:72px} }
+      @media(max-width:700px){ #nbStoreButton{right:68px} #nbUseButton{right:122px} #nbPowerTimer{right:178px;bottom:86px;top:auto} }
+      @media(min-width:701px){ #nbPowerTimer{right:188px;bottom:88px;top:auto} }
       .expansionTouch {
         position:fixed;bottom:70px;z-index:9999;border:0;border-radius:50%;
         width:48px;height:48px;font-size:20px;background:rgba(20,25,35,.82);
@@ -6261,10 +6265,7 @@ setLanguage(selectedLanguage);
     if (document.getElementById("expansionHud")) return;
     const hud = document.createElement("div");
     hud.id = "expansionHud";
-    hud.innerHTML = `
-      <span id="expShield">🛡️ 0</span>
-      <span id="expFlight">✈️ 0</span>
-    `;
+    hud.innerHTML = ``;
     document.body.appendChild(hud);
   }
 
@@ -6273,7 +6274,7 @@ setLanguage(selectedLanguage);
   function saveShopState() {
     try {
       const data = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}");
-      data.shopInventory = { shield: expansion.shield, laser: expansion.laserPacks, flight: expansion.flightPacks, invisibility: expansion.invisibilityPacks };
+      data.shopInventory = { shield: expansion.shield, laser: expansion.laserPacks, laserShots: Number(typeof laserShots !== 'undefined' ? laserShots : 0), flight: expansion.flightPacks, invisibility: expansion.invisibilityPacks };
       data.shopActive = expansion.activeItem;
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     } catch (_) {}
@@ -6285,6 +6286,7 @@ setLanguage(selectedLanguage);
       const inv = data.shopInventory || {};
       expansion.shield = Number(inv.shield || data.shield || 0);
       expansion.laserPacks = Number(inv.laser || 0);
+      if (typeof laserShots !== 'undefined') laserShots = Number(inv.laserShots || 0);
       expansion.flightPacks = Number(inv.flight || inv.star || 0);
       expansion.invisibilityPacks = Number(inv.invisibility || 0);
       expansion.activeItem = data.shopActive || null;
@@ -6298,7 +6300,7 @@ setLanguage(selectedLanguage);
     }
     if (!document.getElementById('nbUseButton')) {
       const b = document.createElement('button'); b.id='nbUseButton'; b.type='button'; b.title=t('استخدام العنصر','Use item');
-      b.onclick=(ev)=>{ ev.preventDefault(); ev.stopPropagation(); useActiveItem(); }; b.addEventListener('pointerdown',(ev)=>{ ev.preventDefault(); ev.stopPropagation(); },{passive:false}); document.body.appendChild(b);
+      b.onclick=(ev)=>{ev.preventDefault();ev.stopPropagation();useActiveItem();}; b.addEventListener('pointerdown',(ev)=>{ev.preventDefault();ev.stopPropagation();}); document.body.appendChild(b);
     }
     if (!document.getElementById('nbPowerTimer')) {
       const timer = document.createElement('div'); timer.id='nbPowerTimer'; timer.setAttribute('aria-live','polite');
@@ -6310,7 +6312,12 @@ setLanguage(selectedLanguage);
   function updateUseButton() {
     const b=document.getElementById('nbUseButton'); if(!b) return;
     const icons={shield:'🛡️',laser:'🔫',flight:'✈️',invisibility:'👻'};
-    const counts={shield:expansion.shield,laser:expansion.laserPacks,flight:expansion.flightPacks,invisibility:expansion.invisibilityPacks};
+    const counts={
+      shield: expansion.shield,
+      laser: Math.max(Number(expansion.laserPacks || 0), Number(typeof laserShots !== 'undefined' ? laserShots : 0)),
+      flight: expansion.flightPacks,
+      invisibility: expansion.invisibilityPacks
+    };
     const active=expansion.activeItem && counts[expansion.activeItem]>0 ? expansion.activeItem : null;
     b.style.display=(typeof gameRunning!=='undefined' && gameRunning && active)?'block':'none';
     b.textContent=active?icons[active]:'🎒';
@@ -6334,56 +6341,64 @@ setLanguage(selectedLanguage);
   }
 
   function useActiveItem() {
-    const type = expansion.activeItem;
-    if (!type) {
-      announce(t('اشترِ عنصرًا أولًا من المتجر','Buy an item from the shop first'));
-      return false;
-    }
-    const count = type === 'shield' ? expansion.shield :
-                  type === 'laser' ? expansion.laserPacks :
-                  type === 'flight' ? expansion.flightPacks :
-                  expansion.invisibilityPacks;
-    if (count <= 0) {
-      expansion.activeItem = null;
+    const type=expansion.activeItem;
+    if(!type) return;
+
+    if(type==='laser'){
+      // Purchased laser packs are real ammunition. Each use-button press
+      // fires one bolt through the same bolt array used by the laser system.
+      if(Number(laserShots||0)<=0){
+        if(Number(expansion.laserPacks||0)<=0){
+          expansion.activeItem=null;
+          updateUseButton();
+          return;
+        }
+        expansion.laserPacks--;
+        laserShots=5;
+      }
+
+      if (!gameRunning || gameOver || gameWon) return;
+      const direction = (typeof player.direction === 'number' && player.direction < 0) ? -1 : 1;
+      laserShots--;
+      laserBolts.push({
+        x: player.x + (direction > 0 ? player.width - 2 : -16),
+        y: player.y + Math.max(8, player.height * 0.38),
+        width: 18, height: 6, vx: direction * 13, life: 70
+      });
+      if (typeof playTone === 'function') playTone(620, 0.07, 'square', 0.08, 180);
+      if(Number(laserShots||0)<=0 && Number(expansion.laserPacks||0)<=0) expansion.activeItem=null;
+      saveShopState();
       updateUseButton();
-      return false;
+      return;
     }
 
-    const now = Date.now();
-    if (type === 'shield') {
-      expansion.invincibleUntil = Math.max(Number(expansion.invincibleUntil || 0), now + 10000);
-      expansion.activeTimedType = 'shield';
+    const count=type==='shield'?expansion.shield:type==='flight'?expansion.flightPacks:expansion.invisibilityPacks;
+    if(count<=0){ expansion.activeItem=null; updateUseButton(); return; }
+
+    if(type==='shield'){
+      // One purchased shield activates full protection for 10 seconds.
+      // It is consumed on activation, not on the first enemy hit.
+      expansion.invincibleUntil=Date.now()+10000;
+      expansion.activeTimedType='shield';
       expansion.shield--;
-    } else if (type === 'laser') {
-      if (typeof laserShots !== 'undefined') laserShots = Math.min(5, Number(laserShots || 0) + 5);
-      expansion.laserPacks--;
-    } else if (type === 'flight') {
-      expansion.flightUntil = now + 10000;
-      expansion.activeTimedType = 'flight';
+    }
+    if(type==='flight'){
+      expansion.flightUntil=Date.now()+10000;
+      expansion.activeTimedType='flight';
       expansion.flightPacks--;
-      expansion.flightAltitude = 270;
-    } else if (type === 'invisibility') {
-      expansion.invisibilityUntil = now + 5000;
-      expansion.activeTimedType = 'invisibility';
+      expansion.flightAltitude=270;
+    }
+    if(type==='invisibility'){
+      expansion.invisibilityUntil=Date.now()+5000;
+      expansion.activeTimedType='invisibility';
       expansion.invisibilityPacks--;
     }
 
-    if ((type === 'shield' && expansion.shield <= 0) ||
-        (type === 'laser' && expansion.laserPacks <= 0) ||
-        (type === 'flight' && expansion.flightPacks <= 0) ||
-        (type === 'invisibility' && expansion.invisibilityPacks <= 0)) {
-      expansion.activeItem = null;
-    }
+    if((type==='shield'&&expansion.shield<=0)||(type==='flight'&&expansion.flightPacks<=0)||(type==='invisibility'&&expansion.invisibilityPacks<=0)) expansion.activeItem=null;
     saveShopState();
     updateUseButton();
-    updatePowerTimer();
-    announce(type === 'shield' ? t('🛡️ الدرع مفعل لمدة 10 ثوانٍ!','🛡️ Shield active for 10 seconds!') :
-             type === 'laser' ? t('🔫 تم تفعيل 5 طلقات ليزر!','🔫 5 laser shots activated!') :
-             type === 'flight' ? t('✈️ الطيران مفعل لمدة 10 ثوانٍ!','✈️ Flight active for 10 seconds!') :
-             t('👻 الاختفاء مفعل لمدة 5 ثوانٍ!','👻 Invisibility active for 5 seconds!'));
-    return true;
+    announce(type==='flight' ? t('✈️ الطيران مفعل لمدة 10 ثوانٍ!','✈️ Flight active for 10 seconds!') : t('تم استخدام العنصر!','Item used!'));
   }
-  window.nbUseActiveItem = useActiveItem;
 
   function addShop() {
     if (document.getElementById("expansionShop")) return;
@@ -6443,13 +6458,9 @@ setLanguage(selectedLanguage);
     addHud();
     const stage = getStage();
     const elapsed = Math.max(0, (Date.now() - expansion.stageStartTime) / 1000);
-    const remaining = Math.max(0, 180 - elapsed);
+    const remaining = Math.max(0, 30 - elapsed);
     const min = Math.floor(remaining / 60);
     const sec = Math.floor(remaining % 60);
-    const shield = document.getElementById("expShield");
-    const flight = document.getElementById("expFlight");
-    if (shield) shield.textContent = `🛡️ ${expansion.shield}`;
-    if (flight) flight.textContent = `✈️ ${expansion.flightPacks}`;
     updateUseButton();
     updatePowerTimer();
   }
@@ -6484,13 +6495,13 @@ setLanguage(selectedLanguage);
     };
 
     // Bosses on every fifth stage.
-    expansion.boss = [5,10,15,20,25,30].includes(getStage()) ? {
+    expansion.boss = [5,10,15,20,25,30,35,40,45].includes(getStage()) ? {
       x: Math.floor(width * 0.91),
       y: 430,
       w: 95,
       h: 120,
-      hp: getStage() === 30 ? 12 : 7,
-      maxHp: getStage() === 30 ? 12 : 7,
+      hp: getStage() === 45 ? 12 : 7,
+      maxHp: getStage() === 45 ? 12 : 7,
       active: true
     } : null;
 
@@ -6550,7 +6561,7 @@ setLanguage(selectedLanguage);
       ctx.save();
       ctx.font = "70px sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(getStage() === 30 ? "👹" : "🐲", x + b.w/2, b.y + 75);
+      ctx.fillText(getStage() === 45 ? "👹" : "🐲", x + b.w/2, b.y + 75);
       ctx.fillStyle = "#222";
       ctx.fillRect(x, b.y - 16, b.w, 8);
       ctx.fillStyle = "#e53935";
@@ -6625,7 +6636,7 @@ setLanguage(selectedLanguage);
     // Award stage stars based on clean completion conditions.
     if (typeof levelComplete !== "undefined" && levelComplete && lastCompletionSavedLevel !== getStage()) {
       const elapsed = (Date.now() - expansion.stageStartTime) / 1000;
-      if (elapsed <= 180) expansion.stageStars = Math.max(expansion.stageStars, 1);
+      if (elapsed <= 30) expansion.stageStars = Math.max(expansion.stageStars, 1);
       if (getCoins() - expansion.stageCoinsStart >= 20) expansion.stageStars = Math.max(expansion.stageStars, 2);
       if (expansion.boss && expansion.bossDefeated) expansion.stageStars = 3;
       saveProgress();
@@ -6649,13 +6660,9 @@ setLanguage(selectedLanguage);
     if (typeof window[name] === "function" && !window[name].__expWrapped) {
       const original = window[name];
       const wrapped = function(...args) {
-        if (Date.now() < expansion.invincibleUntil) return;
-        if (expansion.shield > 0) {
-          expansion.shield--;
-          announce(t("🛡️ الدرع حماك!", "🛡️ Shield blocked the hit!"));
-          updateHud();
-          return;
-        }
+        // Timed protection is authoritative: do not forward damage at all.
+        if (Date.now() < Number(expansion.invincibleUntil || 0) ||
+            Date.now() < Number(expansion.invisibilityUntil || 0)) return;
         return original.apply(this, args);
       };
       wrapped.__expWrapped = true;
@@ -6663,14 +6670,13 @@ setLanguage(selectedLanguage);
     }
   });
 
-  // Input: P opens shop, and S can activate a temporary star in-game.
+  // Input: P opens the shop. E uses the currently selected item.
   document.addEventListener("keydown", e => {
     if (e.key === "p" || e.key === "P") { if (typeof gameRunning !== 'undefined' && gameRunning) openShop(); }
     if (e.key === "e" || e.key === "E") useActiveItem();
     if (e.key === "Escape") { const sh=document.getElementById("expansionShop"); if(sh) sh.style.display="none"; }
   });
 
-  setInterval(() => { try { updatePowerTimer(); updateUseButton(); } catch (_) {} }, 100);
   // Lightweight wrappers around level loading and drawing.
   const originalLoadLevel = typeof window.loadLevel === "function" ? window.loadLevel : null;
   if (originalLoadLevel && !originalLoadLevel.__expWrapped) {
@@ -6725,7 +6731,7 @@ setLanguage(selectedLanguage);
   let lastLevelForAI = -1;
   let enemyHome = new WeakMap();
 
-  function diff(){ return 0.40 + ((currentLevel - 1) / 29) * 0.60; }
+  function diff(){ return 0.40 + ((currentLevel - 1) / 44) * 0.60; }
   function rect(o){ return {x:o.x,y:o.y,width:o.width||o.w,height:o.height||o.h}; }
   function hit(a,b){ return intersects(rect(a),rect(b)); }
   function playerHit(o){ return player && hit(player,o); }
@@ -7787,7 +7793,7 @@ setLanguage(selectedLanguage);
   const TAU = Math.PI * 2;
 
   function themeForLevel() {
-    const n = Math.max(1, Math.min(30, Number(currentLevel) || 1));
+    const n = Math.max(1, Math.min(45, Number(currentLevel) || 1));
     const base = ((n - 1) % 15) + 1;
     return [
       "meadow", "ocean", "forest", "desert", "ice",
@@ -7908,7 +7914,7 @@ setLanguage(selectedLanguage);
   }
 
   function drawLevel3DBackground() {
-    const rawN = Math.max(1, Math.min(30, Number(currentLevel)||1));
+    const rawN = Math.max(1, Math.min(45, Number(currentLevel)||1));
     const n = ((rawN - 1) % 15) + 1;
     const t = performance.now()*.001;
     const scroll = cameraX;
@@ -8140,7 +8146,7 @@ setLanguage(selectedLanguage);
   }
 
   function draw3DPlatforms() {
-    const n = Math.max(1, Math.min(30, Number(currentLevel)||1));
+    const n = Math.max(1, Math.min(45, Number(currentLevel)||1));
     for (const p of platforms) {
       const x=p.x-cameraX;
       if(x+p.width< -80 || x>canvas.width+80) continue;
@@ -8542,9 +8548,8 @@ setLanguage(selectedLanguage);
     controls.style.display = active ? 'block' : 'none';
     if (!active) releaseAll();
     const fire = document.getElementById('nbTouchFire');
-    if (fire && typeof laserShots !== 'undefined') {
-      fire.style.display = laserShots > 0 ? 'block' : 'none';
-    }
+    if (fire) { fire.style.display = 'none'; }
+    if (typeof updateUseButton === 'function') updateUseButton();
   }
 
   function start(){
