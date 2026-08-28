@@ -5967,11 +5967,12 @@ setLanguage(selectedLanguage);
     if (gameRunning) {
       makeMainMenuButton();
       makeFireButton();
+      addShopButtons();
 
       if (addonFireButton) {
-        addonFireButton.style.display =
-          laserShots > 0 ? "block" : "none";
+        addonFireButton.style.display = "none";
       }
+      updateUseButton();
 
       updateMainMenuButtonText();
 
@@ -5986,6 +5987,8 @@ setLanguage(selectedLanguage);
         addonFireButton.remove();
         addonFireButton = null;
       }
+      const ub = document.getElementById("expansionUseButton");
+      if (ub) ub.style.display = "none";
     }
   }
 
@@ -6044,6 +6047,9 @@ setLanguage(selectedLanguage);
 
   // The first level has already been loaded by the stable game.
   resetLaserForCurrentLevel();
+  addShopButtons();
+  const initialSave = loadProgress();
+  if (initialSave.inventory) updateUseButton();
 
   // Keep the main-menu button available whenever gameplay is active.
   // This only creates the existing button; it does not alter the game loop.
@@ -6051,6 +6057,13 @@ setLanguage(selectedLanguage);
     if (gameRunning) {
       makeMainMenuButton();
       updateMainMenuButtonText();
+      addShopButtons();
+      updateUseButton();
+    } else {
+      const sb = document.getElementById("expansionShopButton");
+      const ub = document.getElementById("expansionUseButton");
+      if (sb) sb.style.display = "none";
+      if (ub) ub.style.display = "none";
     }
   }, 120);
 
@@ -6069,9 +6082,9 @@ setLanguage(selectedLanguage);
   const SAVE_KEY = "naughtyBoySaveV3";
   const shop = {
     shield: 25,
-    speed: 40,
-    jump: 40,
-    laser: 30
+    laser: 30,
+    star: 40,
+    invisibility: 35
   };
 
   let lastCompletionSavedLevel = 0;
@@ -6083,8 +6096,11 @@ setLanguage(selectedLanguage);
     bonusCoins: 0,
     shield: 0,
     invincibleUntil: 0,
+    invisibleUntil: 0,
     speedUntil: 0,
     jumpUntil: 0,
+    inventory: { shield: 0, laser: 0, star: 0, invisibility: 0 },
+    selectedItem: null,
     powerUp: null,
     secret: null,
     boss: null,
@@ -6124,6 +6140,8 @@ setLanguage(selectedLanguage);
         score: getScore(),
         shield: expansion.shield,
         bonusCoins: expansion.bonusCoins,
+        inventory: expansion.inventory,
+        selectedItem: expansion.selectedItem,
         stars: old.stars || {}
       };
       data.stars[getStage()] = Math.max(
@@ -6140,6 +6158,15 @@ setLanguage(selectedLanguage);
       if (data && typeof data === "object") {
         expansion.shield = Number(data.shield || 0);
         expansion.bonusCoins = Number(data.bonusCoins || 0);
+        if (data.inventory && typeof data.inventory === "object") {
+          expansion.inventory = {
+            shield: Number(data.inventory.shield || 0),
+            laser: Number(data.inventory.laser || 0),
+            star: Number(data.inventory.star || 0),
+            invisibility: Number(data.inventory.invisibility || 0)
+          };
+        }
+        expansion.selectedItem = data.selectedItem || null;
         return data;
       }
     } catch (_) {}
@@ -6196,6 +6223,17 @@ setLanguage(selectedLanguage);
         width:100%;margin:6px 0;padding:11px;border:0;border-radius:12px;
         font-weight:800;cursor:pointer;
       }
+      #expansionShopButton, #expansionUseButton {
+        position:fixed;top:14px;z-index:10020;width:48px;height:42px;
+        border:0;border-radius:11px;background:rgba(18,25,32,.9);color:#fff;
+        font-size:23px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.28);
+      }
+      #expansionShopButton { right:92px; }
+      #expansionUseButton { right:148px; display:none; }
+      @media (max-width:600px){
+        #expansionShopButton { right:72px; }
+        #expansionUseButton { right:126px; }
+      }
       .expansionTouch {
         position:fixed;bottom:70px;z-index:9999;border:0;border-radius:50%;
         width:48px;height:48px;font-size:20px;background:rgba(20,25,35,.82);
@@ -6225,9 +6263,9 @@ setLanguage(selectedLanguage);
         <h2 id="shopTitle"></h2>
         <p id="shopCoins"></p>
         <button data-buy="shield"></button>
-        <button data-buy="speed"></button>
-        <button data-buy="jump"></button>
         <button data-buy="laser"></button>
+        <button data-buy="star"></button>
+        <button data-buy="invisibility"></button>
         <button data-close></button>
       </div>`;
     document.body.appendChild(wrap);
@@ -6237,24 +6275,24 @@ setLanguage(selectedLanguage);
       btn.onclick = () => {
         const type = btn.dataset.buy;
         const cost = shop[type];
-        let data = {};
-        try { data = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}"); } catch (_) {}
-        const wallet = Number(data.shopCoins || 0);
+        const wallet = getCoins();
         if (wallet < cost) {
           announce(t("العملات غير كافية", "Not enough coins"));
           return;
         }
-        data.shopCoins = wallet - cost;
-        if (type === "shield") expansion.shield++;
-        if (type === "speed") expansion.speedUntil = Date.now() + 15000;
-        if (type === "jump") expansion.jumpUntil = Date.now() + 15000;
-        if (type === "laser") {
-          if (typeof laserShots !== "undefined") laserShots += 5;
-        }
-        localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+        coins -= cost;
+        expansion.inventory[type] = Number(expansion.inventory[type] || 0) + 1;
+        expansion.selectedItem = type;
+        localStorage.setItem(SAVE_KEY, JSON.stringify({
+          ...(JSON.parse(localStorage.getItem(SAVE_KEY) || "{}")),
+          coins: coins,
+          inventory: expansion.inventory,
+          selectedItem: expansion.selectedItem
+        }));
         updateShopText();
         updateHud();
-        announce(t("تم الشراء!", "Purchased!"));
+        updateUseButton();
+        announce(t("تم الشراء! اضغط زر الاستخدام", "Purchased! Press the use button"));
       };
     });
     updateShopText();
@@ -6264,19 +6302,78 @@ setLanguage(selectedLanguage);
     const box = document.getElementById("expansionShop");
     if (!box) return;
     box.querySelector("#shopTitle").textContent = t("🛒 المتجر", "🛒 Shop");
-    let data = {};
-    try { data = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}"); } catch (_) {}
-    const wallet = Number(data.shopCoins || 0);
-    box.querySelector("#shopCoins").textContent =
-      t(`عملات المتجر: ${wallet}`, `Shop coins: ${wallet}`);
+    box.querySelector("#shopCoins").textContent = t(`عملاتك: ${getCoins()}`, `Your coins: ${getCoins()}`);
     const labels = {
-      shield: t("🛡️ درع — 25 عملة", "🛡️ Shield — 25 coins"),
-      speed: t("🏃 سرعة — 40 عملة", "🏃 Speed — 40 coins"),
-      jump: t("🦘 قفزة — 40 عملة", "🦘 Jump — 40 coins"),
-      laser: t("🔫 5 طلقات ليزر — 30 عملة", "🔫 5 Laser shots — 30 coins")
+      shield: t("🛡️ درع 10 ثوانٍ — 25 عملة", "🛡️ Shield 10 sec — 25 coins"),
+      laser: t("🔫 مسدس ليزر (5 طلقات) — 30 عملة", "🔫 Laser Gun (5 shots) — 30 coins"),
+      star: t("⭐ نجمة حماية — 10 ثوانٍ — 40 عملة", "⭐ Star protection — 10 sec — 40 coins"),
+      invisibility: t("👻 اختفاء — 5 ثوانٍ — 35 عملة", "👻 Invisibility — 5 sec — 35 coins")
     };
-    box.querySelectorAll("[data-buy]").forEach(b => b.textContent = labels[b.dataset.buy]);
+    box.querySelectorAll("[data-buy]").forEach(b => {
+      const type = b.dataset.buy;
+      b.textContent = `${labels[type]}  |  ${t("المملوك: ", "Owned: ")}${Number(expansion.inventory[type] || 0)}`;
+    });
     box.querySelector("[data-close]").textContent = t("إغلاق", "Close");
+  }
+
+  function addShopButtons() {
+    if (!document.getElementById("expansionShopButton")) {
+      const b = document.createElement("button");
+      b.id = "expansionShopButton";
+      b.textContent = "🛒";
+      b.title = t("المتجر", "Shop");
+      b.onclick = () => openShop();
+      document.body.appendChild(b);
+    }
+    const shopBtn = document.getElementById("expansionShopButton");
+    if (shopBtn) shopBtn.style.display = gameRunning ? "block" : "none";
+    if (!document.getElementById("expansionUseButton")) {
+      const b = document.createElement("button");
+      b.id = "expansionUseButton";
+      b.onclick = () => useSelectedItem();
+      document.body.appendChild(b);
+    }
+    updateUseButton();
+  }
+
+  function updateUseButton() {
+    const b = document.getElementById("expansionUseButton");
+    if (!b) return;
+    const type = expansion.selectedItem;
+    const count = type ? Number(expansion.inventory[type] || 0) : 0;
+    b.style.display = (gameRunning && type && count > 0) ? "block" : "none";
+    const icons = { shield:"🛡️", laser:"🔫", star:"⭐", invisibility:"👻" };
+    b.textContent = type ? `${icons[type]}${count}` : "";
+    b.title = t("استخدام العنصر", "Use item");
+  }
+
+  function useSelectedItem() {
+    if (!gameRunning || gameOver || gameWon) return;
+    const type = expansion.selectedItem;
+    if (!type || Number(expansion.inventory[type] || 0) <= 0) return;
+    expansion.inventory[type]--;
+    if (type === "shield") {
+      expansion.shield++;
+      announce(t("🛡️ الدرع جاهز! يحميك من ضربة", "🛡️ Shield ready! Blocks one hit"));
+    } else if (type === "laser") {
+      if (typeof laserShots !== "undefined") laserShots += 5;
+      announce(t("🔫 حصلت على 5 طلقات ليزر", "🔫 You got 5 laser shots"));
+    } else if (type === "star") {
+      expansion.invincibleUntil = Date.now() + 10000;
+      announce(t("⭐ الحماية مفعلة لـ10 ثوانٍ", "⭐ Protection active for 10 seconds"));
+    } else if (type === "invisibility") {
+      expansion.invisibleUntil = Date.now() + 5000;
+      announce(t("👻 الاختفاء مفعّل لـ5 ثوانٍ", "👻 Invisible for 5 seconds"));
+    }
+    expansion.selectedItem = null;
+    updateUseButton();
+    try {
+      const data = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}");
+      data.coins = getCoins();
+      data.inventory = expansion.inventory;
+      data.selectedItem = expansion.selectedItem;
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    } catch (_) {}
   }
 
   function openShop() {
@@ -6450,12 +6547,7 @@ setLanguage(selectedLanguage);
 
   // Save a little extra currency for the shop without altering the original coin counter.
   function syncShopCoins() {
-    try {
-      const data = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}");
-      data.shopCoins = Number(data.shopCoins || 0) + expansion.bonusCoins;
-      expansion.bonusCoins = 0;
-      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-    } catch (_) {}
+    // Shop now uses the game's real coin counter directly.
   }
 
   // Damage protection: only intercept if the core exposes a common damage function.
@@ -6481,6 +6573,7 @@ setLanguage(selectedLanguage);
   // Input: P opens shop, and S can activate a temporary star in-game.
   document.addEventListener("keydown", e => {
     if (e.key === "p" || e.key === "P") openShop();
+    if (e.key === "e" || e.key === "E") useSelectedItem();
     if (e.key === "s" || e.key === "S") {
       if (typeof gameRunning !== "undefined" && gameRunning) {
         expansion.invincibleUntil = Date.now() + 12000;
