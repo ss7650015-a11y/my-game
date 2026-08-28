@@ -2386,7 +2386,7 @@ function playerDied(reason = "enemy") {
     player.y = Math.max(0, Math.min(520, lastSafeY));
     player.vx = 0;
     player.vy = 0;
-    player.ground = false;
+    player.ground = true;
   }
 
   if (lives > 0) {
@@ -5233,42 +5233,31 @@ function loop() {
   }
 
 
-  // IMPORTANT: damage/death must never break the animation loop.
-  // updatePlayer() can report a hazard/fall, and updateEnemies() can report
-  // a harmful enemy collision. In both cases we handle the lost heart and
-  // continue the same frame unless all 3 hearts are gone.
-  const playerUpdateOK = updatePlayer();
-  if (!playerUpdateOK) {
+  if (!updatePlayer()) {
     playerDied("hazard");
+    // Do NOT return here: the main animation loop must continue when hearts remain.
+    // If all hearts are gone, the gameOver branch below handles stopping.
     if (gameOver) {
       draw();
-      stopGame();
       return;
     }
   }
 
-  // Only store a checkpoint while the player is actually standing safely on
-  // solid ground. Never store a falling position over a pit or hazard.
-  if (
-    Number.isFinite(player.x) &&
-    Number.isFinite(player.y) &&
-    player.ground &&
-    player.y < canvas.height + 40
-  ) {
-    lastSafeX = Math.max(20, player.x);
+  // Remember the latest successfully updated position. This becomes the
+  // respawn point after losing a life.
+  if (player.ground && Number.isFinite(player.x) && Number.isFinite(player.y) && player.y < 570) {
+    lastSafeX = Math.max(100, player.x);
     lastSafeY = player.y;
   }
 
-  const enemiesUpdateOK = updateEnemies();
-  if (!enemiesUpdateOK) {
+
+  if (!updateEnemies()) {
     playerDied("enemy");
+    // Do NOT return here: losing a heart must not freeze the game.
     if (gameOver) {
       draw();
-      stopGame();
       return;
     }
-    // Enemy damage removes exactly one heart but NEVER exits the loop.
-    // The player remains in the same position and can continue playing.
   }
 
   updateSmartEnemies();
