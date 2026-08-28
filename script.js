@@ -1430,6 +1430,8 @@ function loadLevel(number, snapshotProgress = true) {
   if (snapshotProgress !== false) {
     respawnCheckpointX = 100;
     respawnCheckpointY = 400;
+    lastSafeX = 100;
+    lastSafeY = 400;
   }
 
   cameraX = 0;
@@ -2349,13 +2351,19 @@ function nextLevel() {
 // ============================================================
 let respawnCheckpointX = 100;
 let respawnCheckpointY = 400;
+// Last position reached while the player was still safely inside the stage.
+// This is used for life-loss respawns so a death never sends the player back to 100.
+let lastSafeX = 100;
+let lastSafeY = 400;
 
 function setRespawnCheckpointFromDeath() {
-  // Keep the respawn close to the place of death, but slightly behind
-  // the player so an enemy cannot immediately trigger the same hit.
-  const back = player.direction >= 0 ? -110 : 110;
-  respawnCheckpointX = Math.max(100, player.x + back);
-  respawnCheckpointY = Math.max(0, Math.min(520, player.y));
+  // Respawn near the latest safe position, not at the beginning of the stage.
+  // Move slightly backward so the same enemy/hazard does not immediately hit again.
+  const sourceX = Math.max(100, lastSafeX, player.x);
+  const sourceY = Number.isFinite(lastSafeY) ? lastSafeY : player.y;
+  const back = player.direction >= 0 ? -160 : 160;
+  respawnCheckpointX = Math.max(100, sourceX + back);
+  respawnCheckpointY = Math.max(0, Math.min(520, sourceY));
 }
 
 function playerDied() {
@@ -2488,6 +2496,8 @@ function restartGame() {
 
     respawnCheckpointX = 100;
     respawnCheckpointY = 400;
+    lastSafeX = 100;
+    lastSafeY = 400;
     resetCurrentLevel();
   }
 
@@ -2514,6 +2524,8 @@ function restartGame() {
 
     respawnCheckpointX = 100;
     respawnCheckpointY = 400;
+    lastSafeX = 100;
+    lastSafeY = 400;
     resetCurrentLevel();
   }
 
@@ -2528,6 +2540,8 @@ function restartGame() {
 
     respawnCheckpointX = 100;
     respawnCheckpointY = 400;
+    lastSafeX = 100;
+    lastSafeY = 400;
     resetCurrentLevel();
   }
 
@@ -5261,6 +5275,13 @@ function loop() {
     playerDied();
 
     return;
+  }
+
+  // Remember the latest successfully updated position. This becomes the
+  // respawn point after losing a life.
+  if (Number.isFinite(player.x) && Number.isFinite(player.y) && player.y < 570) {
+    lastSafeX = Math.max(100, player.x);
+    lastSafeY = player.y;
   }
 
 
