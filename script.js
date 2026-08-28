@@ -5845,35 +5845,6 @@ setLanguage(selectedLanguage);
 
     ctx.restore();
 
-    // Ammo display only after pickup.
-    if (laserShots > 0) {
-
-      ctx.save();
-
-      ctx.fillStyle = "rgba(0,0,0,.58)";
-      ctx.roundRect(
-        16,
-        92,
-        145,
-        38,
-        10
-      );
-      ctx.fill();
-
-      ctx.font = "bold 16px Arial";
-      ctx.fillStyle = "#fff";
-      ctx.textAlign = "left";
-
-      ctx.fillText(
-        languageText()
-          ? "🔫 Laser: " + laserShots
-          : "🔫 الليزر: " + laserShots,
-        27,
-        117
-      );
-
-      ctx.restore();
-    }
   }
 
   function makeMainMenuButton() {
@@ -6250,6 +6221,7 @@ setLanguage(selectedLanguage);
       #nbStoreButton:hover, #nbUseButton:hover { transform:translateY(-1px) scale(1.04); filter:brightness(1.12); }
       #nbStoreButton { right:72px; }
       #nbUseButton { right:128px; display:none; }
+      /* On touch devices these two controls are moved beside the run button. */
       #nbPowerTimer {
         position:fixed; z-index:10002; display:none; min-width:86px; height:34px;
         padding:6px 10px; border-radius:12px; background:rgba(15,20,30,.92); color:#fff;
@@ -6265,7 +6237,11 @@ setLanguage(selectedLanguage);
       }
       #expansionShop button[data-buy]:hover { filter:brightness(.97); transform:translateY(-1px); }
       #expansionShop button[data-close] { background:#263238; color:#fff; font-size:16px; }
-      @media(max-width:700px){ #nbStoreButton{right:68px} #nbUseButton{right:122px} #nbPowerTimer{right:178px;bottom:86px;top:auto} }
+      @media(max-width:700px){
+        #nbStoreButton{right:162px;top:auto;bottom:max(18px,calc(18px + env(safe-area-inset-bottom)));}
+        #nbUseButton{right:14px;top:auto;bottom:max(18px,calc(18px + env(safe-area-inset-bottom)));}
+        #nbPowerTimer{right:236px;bottom:max(86px,calc(86px + env(safe-area-inset-bottom)));top:auto}
+      }
       @media(min-width:701px){ #nbPowerTimer{right:188px;bottom:88px;top:auto} }
       .expansionTouch {
         position:fixed;bottom:70px;z-index:9999;border:0;border-radius:50%;
@@ -6334,7 +6310,7 @@ setLanguage(selectedLanguage);
       invisibility: expansion.invisibilityPacks
     };
     const active=expansion.activeItem && counts[expansion.activeItem]>0 ? expansion.activeItem : null;
-    b.style.display=(typeof gameRunning!=='undefined' && gameRunning && active)?'block':'none';
+    b.style.display=(typeof gameRunning!=='undefined' && gameRunning && active && !isTouchDevice())?'block':'none';
     b.textContent=active?icons[active]:'🎒';
     b.title=active?t('استخدام العنصر','Use item'):t('لا يوجد عنصر','No item');
     b.setAttribute('aria-label', active ? t('استخدام العنصر','Use item') : t('لا يوجد عنصر','No item'));
@@ -6444,7 +6420,9 @@ setLanguage(selectedLanguage);
         if(type==='invisibility') expansion.invisibilityPacks++;
         expansion.activeItem=type;
         updateHUD(); saveShopState(); updateShopText(); updateUseButton();
-        announce(t("تم الشراء! اضغط زر الاستخدام 🛒","Purchased! Press the use button."));
+        announce(t("تم الشراء! اضغط زر الاستخدام للعنصر.","Purchased! Press the item-use button."));
+        try { ensureTopButtons(); } catch (_) {}
+        updateUseButton();
       };
     });
     updateShopText();
@@ -8575,7 +8553,15 @@ setLanguage(selectedLanguage);
     controls.style.display = active ? 'block' : 'none';
     if (!active) releaseAll();
     const fire = document.getElementById('nbTouchFire');
-    if (fire) { fire.style.display = 'none'; }
+    if (fire) {
+      const icons={shield:'🛡️',laser:'🔫',flight:'✈️',invisibility:'👻'};
+      const counts={shield: expansion.shield, laser: Math.max(Number(expansion.laserPacks||0), Number(typeof laserShots!=='undefined'?laserShots:0)), flight: expansion.flightPacks, invisibility: expansion.invisibilityPacks};
+      const active=expansion.activeItem && counts[expansion.activeItem]>0 ? expansion.activeItem : null;
+      fire.style.display = (active && isTouchDevice() && typeof gameRunning!=='undefined' && gameRunning) ? 'block' : 'none';
+      fire.textContent = active ? icons[active] : '🎒';
+      fire.title = active ? t('استخدام العنصر','Use item') : t('لا يوجد عنصر','No item');
+      fire.setAttribute('aria-label', active ? t('استخدام العنصر','Use item') : t('لا يوجد عنصر','No item'));
+    }
     if (typeof updateUseButton === 'function') updateUseButton();
   }
 
