@@ -6298,7 +6298,7 @@ setLanguage(selectedLanguage);
     }
     if (!document.getElementById('nbUseButton')) {
       const b = document.createElement('button'); b.id='nbUseButton'; b.type='button'; b.title=t('استخدام العنصر','Use item');
-      b.onclick=()=>useActiveItem(); document.body.appendChild(b);
+      b.onclick=(ev)=>{ ev.preventDefault(); ev.stopPropagation(); useActiveItem(); }; b.addEventListener('pointerdown',(ev)=>{ ev.preventDefault(); ev.stopPropagation(); },{passive:false}); document.body.appendChild(b);
     }
     if (!document.getElementById('nbPowerTimer')) {
       const timer = document.createElement('div'); timer.id='nbPowerTimer'; timer.setAttribute('aria-live','polite');
@@ -6334,17 +6334,56 @@ setLanguage(selectedLanguage);
   }
 
   function useActiveItem() {
-    const type=expansion.activeItem; if(!type) return;
-    const count=type==='shield'?expansion.shield:type==='laser'?expansion.laserPacks:type==='flight'?expansion.flightPacks:expansion.invisibilityPacks;
-    if(count<=0){ expansion.activeItem=null; updateUseButton(); return; }
-    if(type==='shield'){ expansion.invincibleUntil=Date.now()+10000; expansion.activeTimedType='shield'; expansion.shield--; }
-    if(type==='laser'){ if(typeof laserShots!=='undefined') laserShots=Math.min(5,Number(laserShots||0)+5); expansion.laserPacks--; }
-    if(type==='flight'){ expansion.flightUntil=Date.now()+10000; expansion.activeTimedType='flight'; expansion.flightPacks--; expansion.flightAltitude=270; }
-    if(type==='invisibility'){ expansion.invisibilityUntil=Date.now()+5000; expansion.activeTimedType='invisibility'; expansion.invisibilityPacks--; }
-    if((type==='shield'&&expansion.shield<=0)||(type==='laser'&&expansion.laserPacks<=0)||(type==='flight'&&expansion.flightPacks<=0)||(type==='invisibility'&&expansion.invisibilityPacks<=0)) expansion.activeItem=null;
-    saveShopState(); updateUseButton();
-    announce(type==='flight' ? t('✈️ الطيران مفعل لمدة 10 ثوانٍ!','✈️ Flight active for 10 seconds!') : t('تم استخدام العنصر!','Item used!'));
+    const type = expansion.activeItem;
+    if (!type) {
+      announce(t('اشترِ عنصرًا أولًا من المتجر','Buy an item from the shop first'));
+      return false;
+    }
+    const count = type === 'shield' ? expansion.shield :
+                  type === 'laser' ? expansion.laserPacks :
+                  type === 'flight' ? expansion.flightPacks :
+                  expansion.invisibilityPacks;
+    if (count <= 0) {
+      expansion.activeItem = null;
+      updateUseButton();
+      return false;
+    }
+
+    const now = Date.now();
+    if (type === 'shield') {
+      expansion.invincibleUntil = Math.max(Number(expansion.invincibleUntil || 0), now + 10000);
+      expansion.activeTimedType = 'shield';
+      expansion.shield--;
+    } else if (type === 'laser') {
+      if (typeof laserShots !== 'undefined') laserShots = Math.min(5, Number(laserShots || 0) + 5);
+      expansion.laserPacks--;
+    } else if (type === 'flight') {
+      expansion.flightUntil = now + 10000;
+      expansion.activeTimedType = 'flight';
+      expansion.flightPacks--;
+      expansion.flightAltitude = 270;
+    } else if (type === 'invisibility') {
+      expansion.invisibilityUntil = now + 5000;
+      expansion.activeTimedType = 'invisibility';
+      expansion.invisibilityPacks--;
+    }
+
+    if ((type === 'shield' && expansion.shield <= 0) ||
+        (type === 'laser' && expansion.laserPacks <= 0) ||
+        (type === 'flight' && expansion.flightPacks <= 0) ||
+        (type === 'invisibility' && expansion.invisibilityPacks <= 0)) {
+      expansion.activeItem = null;
+    }
+    saveShopState();
+    updateUseButton();
+    updatePowerTimer();
+    announce(type === 'shield' ? t('🛡️ الدرع مفعل لمدة 10 ثوانٍ!','🛡️ Shield active for 10 seconds!') :
+             type === 'laser' ? t('🔫 تم تفعيل 5 طلقات ليزر!','🔫 5 laser shots activated!') :
+             type === 'flight' ? t('✈️ الطيران مفعل لمدة 10 ثوانٍ!','✈️ Flight active for 10 seconds!') :
+             t('👻 الاختفاء مفعل لمدة 5 ثوانٍ!','👻 Invisibility active for 5 seconds!'));
+    return true;
   }
+  window.nbUseActiveItem = useActiveItem;
 
   function addShop() {
     if (document.getElementById("expansionShop")) return;
@@ -6629,14 +6668,9 @@ setLanguage(selectedLanguage);
     if (e.key === "p" || e.key === "P") { if (typeof gameRunning !== 'undefined' && gameRunning) openShop(); }
     if (e.key === "e" || e.key === "E") useActiveItem();
     if (e.key === "Escape") { const sh=document.getElementById("expansionShop"); if(sh) sh.style.display="none"; }
-    if (e.key === "s" || e.key === "S") {
-      if (typeof gameRunning !== "undefined" && gameRunning) {
-        expansion.invincibleUntil = Date.now() + 12000;
-        announce(t("⭐ قوة النجمة مفعلة!", "⭐ Star power activated!"));
-      }
-    }
   });
 
+  setInterval(() => { try { updatePowerTimer(); updateUseButton(); } catch (_) {} }, 100);
   // Lightweight wrappers around level loading and drawing.
   const originalLoadLevel = typeof window.loadLevel === "function" ? window.loadLevel : null;
   if (originalLoadLevel && !originalLoadLevel.__expWrapped) {
