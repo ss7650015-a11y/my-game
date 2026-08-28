@@ -1,6 +1,6 @@
 // ============================================================
 // SUPER MARIO STYLE GAME
-// 15 LEVELS + 7 ANIMAL ENEMIES + RUNNING + SOUND SYSTEM
+// 45 LEVELS + 50 MONSTER ENEMIES + RUNNING + SOUND SYSTEM
 // ============================================================
 
 
@@ -1076,87 +1076,9 @@ function platform(
 }
 
 
-function enemy(
-  type,
-  x,
-  y,
-  minX,
-  maxX,
-  speed
-) {
+const MONSTER_TYPES = [{"name":"وحش مرعب 1","color":"#5b0b12","accent":"#ff304f","ability":"patrol","shape":"fang"},{"name":"وحش مرعب 2","color":"#1d3557","accent":"#52d6ff","ability":"jumper","shape":"horn"},{"name":"وحش مرعب 3","color":"#3a0f4f","accent":"#c15cff","ability":"flyer","shape":"eye"},{"name":"وحش مرعب 4","color":"#163b24","accent":"#7dff65","ability":"chaser","shape":"mask"},{"name":"وحش مرعب 5","color":"#4b2e05","accent":"#ffb52e","ability":"shooter","shape":"spike"},{"name":"وحش مرعب 6","color":"#35113f","accent":"#ff304f","ability":"ambush","shape":"jaw"},{"name":"وحش مرعب 7","color":"#0f3b46","accent":"#52d6ff","ability":"dasher","shape":"bat"},{"name":"وحش مرعب 8","color":"#4a1c1c","accent":"#c15cff","ability":"teleporter","shape":"shell"},{"name":"وحش مرعب 9","color":"#23395d","accent":"#7dff65","ability":"zigzag","shape":"tentacle"},{"name":"وحش مرعب 10","color":"#522a27","accent":"#ffb52e","ability":"guardian","shape":"skull"},{"name":"وحش مرعب 11","color":"#5b0b12","accent":"#ff304f","ability":"patrol","shape":"fang"},{"name":"وحش مرعب 12","color":"#1d3557","accent":"#52d6ff","ability":"jumper","shape":"horn"},{"name":"وحش مرعب 13","color":"#3a0f4f","accent":"#c15cff","ability":"flyer","shape":"eye"},{"name":"وحش مرعب 14","color":"#163b24","accent":"#7dff65","ability":"chaser","shape":"mask"},{"name":"وحش مرعب 15","color":"#4b2e05","accent":"#ffb52e","ability":"shooter","shape":"spike"},{"name":"وحش مرعب 16","color":"#35113f","accent":"#ff304f","ability":"ambush","shape":"jaw"},{"name":"وحش مرعب 17","color":"#0f3b46","accent":"#52d6ff","ability":"dasher","shape":"bat"},{"name":"وحش مرعب 18","color":"#4a1c1c","accent":"#c15cff","ability":"teleporter","shape":"shell"},{"name":"وحش مرعب 19","color":"#23395d","accent":"#7dff65","ability":"zigzag","shape":"tentacle"},{"name":"وحش مرعب 20","color":"#522a27","accent":"#ffb52e","ability":"guardian","shape":"skull"},{"name":"وحش مرعب 21","color":"#5b0b12","accent":"#ff304f","ability":"patrol","shape":"fang"},{"name":"وحش مرعب 22","color":"#1d3557","accent":"#52d6ff","ability":"jumper","shape":"horn"},{"name":"وحش مرعب 23","color":"#3a0f4f","accent":"#c15cff","ability":"flyer","shape":"eye"},{"name":"وحش مرعب 24","color":"#163b24","accent":"#7dff65","ability":"chaser","shape":"mask"},{"name":"وحش مرعب 25","color":"#4b2e05","accent":"#ffb52e","ability":"shooter","shape":"spike"},{"name":"وحش مرعب 26","color":"#35113f","accent":"#ff304f","ability":"ambush","shape":"jaw"},{"name":"وحش مرعب 27","color":"#0f3b46","accent":"#52d6ff","ability":"dasher","shape":"bat"},{"name":"وحش مرعب 28","color":"#4a1c1c","accent":"#c15cff","ability":"teleporter","shape":"shell"},{"name":"وحش مرعب 29","color":"#23395d","accent":"#7dff65","ability":"zigzag","shape":"tentacle"},{"name":"وحش مرعب 30","color":"#522a27","accent":"#ffb52e","ability":"guardian","shape":"skull"},{"name":"وحش مرعب 31","color":"#5b0b12","accent":"#ff304f","ability":"patrol","shape":"fang"},{"name":"وحش مرعب 32","color":"#1d3557","accent":"#52d6ff","ability":"jumper","shape":"horn"},{"name":"وحش مرعب 33","color":"#3a0f4f","accent":"#c15cff","ability":"flyer","shape":"eye"},{"name":"وحش مرعب 34","color":"#163b24","accent":"#7dff65","ability":"chaser","shape":"mask"},{"name":"وحش مرعب 35","color":"#4b2e05","accent":"#ffb52e","ability":"shooter","shape":"spike"},{"name":"وحش مرعب 36","color":"#35113f","accent":"#ff304f","ability":"ambush","shape":"jaw"},{"name":"وحش مرعب 37","color":"#0f3b46","accent":"#52d6ff","ability":"dasher","shape":"bat"},{"name":"وحش مرعب 38","color":"#4a1c1c","accent":"#c15cff","ability":"teleporter","shape":"shell"},{"name":"وحش مرعب 39","color":"#23395d","accent":"#7dff65","ability":"zigzag","shape":"tentacle"},{"name":"وحش مرعب 40","color":"#522a27","accent":"#ffb52e","ability":"guardian","shape":"skull"},{"name":"وحش مرعب 41","color":"#5b0b12","accent":"#ff304f","ability":"patrol","shape":"fang"},{"name":"وحش مرعب 42","color":"#1d3557","accent":"#52d6ff","ability":"jumper","shape":"horn"},{"name":"وحش مرعب 43","color":"#3a0f4f","accent":"#c15cff","ability":"flyer","shape":"eye"},{"name":"وحش مرعب 44","color":"#163b24","accent":"#7dff65","ability":"chaser","shape":"mask"},{"name":"وحش مرعب 45","color":"#4b2e05","accent":"#ffb52e","ability":"shooter","shape":"spike"},{"name":"وحش مرعب 46","color":"#35113f","accent":"#ff304f","ability":"ambush","shape":"jaw"},{"name":"وحش مرعب 47","color":"#0f3b46","accent":"#52d6ff","ability":"dasher","shape":"bat"},{"name":"وحش مرعب 48","color":"#4a1c1c","accent":"#c15cff","ability":"teleporter","shape":"shell"},{"name":"وحش مرعب 49","color":"#23395d","accent":"#7dff65","ability":"zigzag","shape":"tentacle"},{"name":"وحش مرعب 50","color":"#522a27","accent":"#ffb52e","ability":"guardian","shape":"skull"}];
 
-  let width = 42;
-
-  let height = 40;
-
-
-  if (type === 2) {
-
-    width = 38;
-    height = 38;
-  }
-
-
-  if (type === 4) {
-
-    width = 45;
-    height = 35;
-  }
-
-
-  if (type === 5) {
-
-    width = 55;
-    height = 40;
-  }
-
-
-  if (type === 7) {
-
-    width = 55;
-    height = 42;
-  }
-
-
-  return {
-
-    type,
-
-    x,
-
-    y,
-
-    width,
-
-    height,
-
-    minX,
-
-    maxX,
-
-    speed,
-
-    direction: 1,
-
-    alive: true,
-
-    vy: 0,
-
-    gravity: 0.5,
-
-    jumpPower: 9,
-
-    baseY: y,
-
-    time:
-      Math.random() * 10,
-
-    hits:
-      type === 7
-        ? 2
-        : 1
-  };
-}
+function enemy(type,x,y,minX,maxX,speed){const cfg=MONSTER_TYPES[(type-1)%50],i=type-1;return{type,name:cfg.name,color:cfg.color,accent:cfg.accent,ability:cfg.ability,shape:cfg.shape,x,y,width:38+(i%5)*4,height:38+((i*3)%5)*3,minX,maxX,speed,direction:1,alive:true,vy:0,gravity:.5,jumpPower:8+(i%5),baseY:y,time:Math.random()*10,cooldown:70+(i%9)*12,phase:i*.37,teleportTimer:120+(i%7)*20,shootTimer:90+(i%8)*15};}
 
 
 // ============================================================
@@ -1164,191 +1086,77 @@ function enemy(
 // ============================================================
 
 const worlds = [
-
-  { name: "المروج الخضراء", theme: "grass", sky1: "#54c9ff", sky2: "#e7fbff" },
-  { name: "شاطئ الحيتان", theme: "ocean", sky1: "#45b9e8", sky2: "#d8f7ff" },
-  { name: "الغابة البرية", theme: "forest", sky1: "#319f7a", sky2: "#bce8bd" },
-  { name: "الصحراء الحمراء", theme: "desert", sky1: "#f2a94b", sky2: "#ffe7a5" },
-  { name: "جبال الجليد", theme: "ice", sky1: "#6db8e6", sky2: "#e9fbff" },
-  { name: "وادي البركان", theme: "volcano", sky1: "#381c2d", sky2: "#e16b3b" },
-  { name: "قلعة الظلام", theme: "castle", sky1: "#11162f", sky2: "#574b7a" },
-  { name: "مستنقع التماسيح", theme: "swamp", sky1: "#183f35", sky2: "#79b36b" },
-  { name: "كهوف الخفافيش", theme: "cave", sky1: "#101522", sky2: "#4c5270" },
-  { name: "مدينة العاصفة", theme: "storm", sky1: "#29344f", sky2: "#9aa9c7" },
-  { name: "جزيرة القراصنة", theme: "pirate", sky1: "#178bb5", sky2: "#d9f3ff" },
-  { name: "سهول العقارب", theme: "desertNight", sky1: "#291d3d", sky2: "#c16b65" },
-  { name: "غابة الأشواك", theme: "thorn", sky1: "#173b2d", sky2: "#7fbf78" },
-  { name: "بحيرة الوحوش", theme: "monsterLake", sky1: "#173d57", sky2: "#6db3c7" },
-  { name: "قلعة النهاية", theme: "final", sky1: "#090b18", sky2: "#6f304a" },
-  { name: "حدائق الربيع", theme: "grass", sky1: "#67d9c1", sky2: "#f4ffe8" },
-  { name: "خليج المرجان", theme: "ocean", sky1: "#4bc9e8", sky2: "#e8ffff" },
-  { name: "غابة الفراشات", theme: "forest", sky1: "#6fc9ff", sky2: "#d8ffd9" },
-  { name: "وادي الرمال الذهبية", theme: "desert", sky1: "#f6b85c", sky2: "#fff1c2" },
-  { name: "قمم الثلج", theme: "ice", sky1: "#79c9ef", sky2: "#ffffff" },
-  { name: "سهول الحمم", theme: "volcano", sky1: "#3b1b26", sky2: "#ff8b52" },
-  { name: "برج القمر", theme: "castle", sky1: "#171b43", sky2: "#766da8" },
-  { name: "مستنقع الضباب", theme: "swamp", sky1: "#214b43", sky2: "#9fcf8a" },
-  { name: "كهف الكريستال", theme: "cave", sky1: "#11182d", sky2: "#6378a8" },
-  { name: "مدينة البرق", theme: "storm", sky1: "#263653", sky2: "#b7c7dc" },
-  { name: "ميناء القراصنة", theme: "pirate", sky1: "#249bc0", sky2: "#ffe5a8" },
-  { name: "صحراء القمر", theme: "desertNight", sky1: "#171437", sky2: "#9a6072" },
-  { name: "غابة الكروم", theme: "thorn", sky1: "#1b4631", sky2: "#91d27f" },
-  { name: "بحيرة التنين", theme: "monsterLake", sky1: "#19435e", sky2: "#7fc6d1" },
-  { name: "بوابة الفجر", theme: "final", sky1: "#23152e", sky2: "#d15d62" }
-
-];
+  { name: "مروج الفجر", theme: "grass", sky1: "#54c9ff", sky2: "#e7fbff", feature: "flowers" },
+  { name: "ساحل العاصفة", theme: "ocean", sky1: "#45b9e8", sky2: "#d8f7ff", feature: "waves" },
+  { name: "غابة الأنياب", theme: "forest", sky1: "#206b50", sky2: "#bce8bd", feature: "fireflies" },
+  { name: "صحراء الدم", theme: "desert", sky1: "#d9783c", sky2: "#ffe0a3", feature: "sandstorm" },
+  { name: "قمم الجليد", theme: "ice", sky1: "#5ca9dc", sky2: "#e9fbff", feature: "snow" },
+  { name: "بركان الجحيم", theme: "volcano", sky1: "#28131f", sky2: "#d6533d", feature: "embers" },
+  { name: "قلعة الظلال", theme: "castle", sky1: "#0c1028", sky2: "#574b7a", feature: "bats" },
+  { name: "مستنقع الموت", theme: "swamp", sky1: "#12352d", sky2: "#79b36b", feature: "fog" },
+  { name: "كهوف العيون", theme: "cave", sky1: "#080d19", sky2: "#4c5270", feature: "crystals" },
+  { name: "مدينة الرعد", theme: "storm", sky1: "#1d2a46", sky2: "#9aa9c7", feature: "lightning" },
+  { name: "جزيرة الأشباح", theme: "pirate", sky1: "#126f91", sky2: "#d9f3ff", feature: "ghostships" },
+  { name: "صحراء القمر", theme: "desertNight", sky1: "#171437", sky2: "#9a6072", feature: "meteors" },
+  { name: "غابة الأشواك", theme: "thorn", sky1: "#102d23", sky2: "#7fbf78", feature: "vines" },
+  { name: "بحيرة التنين", theme: "monsterLake", sky1: "#102f46", sky2: "#6db3c7", feature: "ripples" },
+  { name: "بوابة النهاية", theme: "final", sky1: "#090b18", sky2: "#6f304a", feature: "portal" },
+  { name: "حديقة الزهور السامة", theme: "grass", sky1: "#3c8f75", sky2: "#e8ffe8", feature: "poisonflowers" },
+  { name: "خليج الحطام", theme: "ocean", sky1: "#267da5", sky2: "#d5f7ff", feature: "wrecks" },
+  { name: "غابة الضباب البنفسجي", theme: "forest", sky1: "#4a4675", sky2: "#d5d2ff", feature: "mist" },
+  { name: "وادي الرمال السوداء", theme: "desert", sky1: "#4c3430", sky2: "#c69b72", feature: "ash" },
+  { name: "قلعة الجليد الملعونة", theme: "ice", sky1: "#477a9e", sky2: "#dff7ff", feature: "icicles" },
+  { name: "فوهة الرماد", theme: "volcano", sky1: "#211820", sky2: "#a84b35", feature: "ash" },
+  { name: "برج الساحر", theme: "castle", sky1: "#22153d", sky2: "#735a9e", feature: "runes" },
+  { name: "مستنقع الأرواح", theme: "swamp", sky1: "#15332e", sky2: "#658f5e", feature: "willow" },
+  { name: "كهف البلورات الحمراء", theme: "cave", sky1: "#260f23", sky2: "#7f668b", feature: "gems" },
+  { name: "مدينة الضباب", theme: "storm", sky1: "#38435d", sky2: "#a9b8ce", feature: "rain" },
+  { name: "ميناء القراصنة المظلم", theme: "pirate", sky1: "#15566e", sky2: "#d7d5b8", feature: "cannons" },
+  { name: "صحراء الكسوف", theme: "desertNight", sky1: "#171124", sky2: "#8c5261", feature: "eclipse" },
+  { name: "غابة الكروم السوداء", theme: "thorn", sky1: "#14251f", sky2: "#547d5c", feature: "blackvines" },
+  { name: "بحيرة الوحش العملاق", theme: "monsterLake", sky1: "#122f3a", sky2: "#5c9aa0", feature: "tentacles" },
+  { name: "حصن النهاية", theme: "final", sky1: "#160b17", sky2: "#8e3d50", feature: "firewall" },
+  { name: "سهول القمر الأخضر", theme: "grass", sky1: "#4a9f86", sky2: "#dfffe9", feature: "moths" },
+  { name: "بحر العواصف", theme: "ocean", sky1: "#246d93", sky2: "#d1ecff", feature: "foam" },
+  { name: "غابة العمالقة", theme: "forest", sky1: "#23563d", sky2: "#9fd49b", feature: "giants" },
+  { name: "وادي الزجاج", theme: "desert", sky1: "#b66b54", sky2: "#ffe1c9", feature: "shards" },
+  { name: "جبل الثلج الأزرق", theme: "ice", sky1: "#4f9cc8", sky2: "#f1ffff", feature: "snowgust" },
+  { name: "بحيرة الحمم", theme: "volcano", sky1: "#30151b", sky2: "#c84e36", feature: "lavafalls" },
+  { name: "قصر المرآة", theme: "castle", sky1: "#1a1b32", sky2: "#696b8e", feature: "mirrors" },
+  { name: "مستنقع السموم", theme: "swamp", sky1: "#1d4233", sky2: "#83a95f", feature: "bubbles" },
+  { name: "كهوف الصدى", theme: "cave", sky1: "#11111c", sky2: "#555c77", feature: "echo" },
+  { name: "مدينة البرق الأحمر", theme: "storm", sky1: "#3a2332", sky2: "#a56f84", feature: "bolts" },
+  { name: "سفينة الأشباح", theme: "pirate", sky1: "#173f57", sky2: "#b6d7d9", feature: "ghostsails" },
+  { name: "صحراء النجوم السوداء", theme: "desertNight", sky1: "#0e1025", sky2: "#6e607d", feature: "stars" },
+  { name: "غابة الوحوش", theme: "thorn", sky1: "#152f25", sky2: "#68936c", feature: "spikes" },
+  { name: "بحيرة العيون", theme: "monsterLake", sky1: "#112b3b", sky2: "#4e8797", feature: "eyes" },
+  { name: "بوابة الظلام", theme: "final", sky1: "#090913", sky2: "#7e2947", feature: "void" }
+];;
 
 
 // ============================================================
 // LEVEL GENERATOR
 // ============================================================
 
-function createLevel(number) {
-
-  // Deterministic level generation: retrying a level restores the exact same layout.
-  let seed = (number * 10007 + 731) >>> 0;
-  const rand = () => {
-    seed = (seed * 1664525 + 1013904223) >>> 0;
-    return seed / 4294967296;
-  };
-
-  // Difficulty: exactly 40% on level 1 -> 100% on level 15.
-  const difficulty =
-    0.40 + (number - 1) * (0.60 / 44);
-
-  // Stages are calibrated for about one minute of continuous running.
-  // At run speed 7.5 px/frame and 60 FPS, 30,000 px is about 67 seconds.
-  // A small increase per stage keeps later stages slightly longer.
-  const width =
-    13500 + (number - 1) * 60;
-
-  const gap =
-    Math.max(72, 155 - difficulty * 65);
-
-  const list = [];
-  const groundY = 550;
-  let x = 0;
-
-  list.push(platform(0, groundY, 420));
-  x = 500;
-
-  let index = 0;
-  while (x < width - 360) {
-
-    const pWidth =
-      135 + rand() * (105 - difficulty * 35);
-
-    const heightVariation =
-      55 + difficulty * 145;
-
-    const y =
-      Math.min(515, 340 + rand() * heightVariation);
-
-    list.push(
-      platform(
-        x,
-        y,
-        Math.max(105, pWidth)
-      )
-    );
-
-    const localGap =
-      gap + rand() * Math.max(25, 80 - difficulty * 45);
-
-    x += pWidth + localGap;
-    index++;
+function createLevel(number){
+  let seed=(number*10007+731)>>>0; const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
+  const difficulty=.40+(number-1)*(.60/44); const width=13500+(number-1)*35; const gap=Math.max(72,155-difficulty*65);
+  const list=[]; const groundY=550; let x=0; list.push(platform(0,groundY,420)); x=500; let index=0;
+  while(x<width-360){
+    const pWidth=135+rand()*(105-difficulty*35); const y=Math.min(515,340+rand()*(55+difficulty*145));
+    const p=platform(x,y,Math.max(105,pWidth));
+    if((index+number)%5===1){p.moving=true;p.baseX=x;p.baseY=y;p.phase=rand()*Math.PI*2;p.moveY=55+(number%4)*12;p.moveX=number%3===0?35:0;p.wood=true;}
+    list.push(p);
+    if((index+number)%7===2 && x+pWidth+520<width-300){for(let k=1;k<=3;k++)list.push(platform(x+pWidth+85*k,y-45*k,82));x+=pWidth+255+gap;}else{x+=pWidth+gap+rand()*35;} index++;
   }
-
-  list.push(platform(width - 360, 500, 360));
-
-  // Coins
-  const generatedCoins = [];
-  list.forEach((p, i) => {
-    if (i === 0 || i === list.length - 1) return;
-
-    const amount =
-      1 + ((i + number) % 3 === 0 ? 1 : 0);
-
-    for (let j = 0; j < amount; j++) {
-      generatedCoins.push({
-        x: p.x + 35 + j * 42,
-        y: p.y - 52,
-        collected: false
-      });
-    }
-  });
-
-  // Seven distinct animal enemy classes.
-  const generatedEnemies = [];
-  for (let i = 3; i < list.length - 1; i++) {
-    const spawnChance = 0.52 + difficulty * 0.42;
-    if (rand() < spawnChance) {
-      const p = list[i];
-      const type = ((i + number * 2) % 7) + 1;
-      generatedEnemies.push(
-        enemy(
-          type,
-          p.x + 30,
-          p.y - 42,
-          p.x + 8,
-          p.x + p.width - 50,
-          1.25 + difficulty * 2.0 + rand() * 0.55
-        )
-      );
-    }
-  }
-
-  // Extra dangerous animals on later levels.
-  if (number >= 5) {
-    for (let i = 4; i < list.length - 1; i += 3) {
-      const p = list[i];
-      generatedEnemies.push(
-        enemy(
-          ((i + number + 4) % 7) + 1,
-          p.x + Math.min(60, p.width * 0.35),
-          p.y - 42,
-          p.x + 12,
-          p.x + p.width - 55,
-          1.5 + difficulty * 2.2
-        )
-      );
-    }
-  }
-
-  // Water hazards in selected gaps: rivers with whales/crocodiles.
-  const generatedHazards = [];
-  for (let i = 0; i < list.length - 1; i++) {
-    const a = list[i];
-    const b = list[i + 1];
-    const gapWidth = b.x - (a.x + a.width);
-
-    if (gapWidth > 85 && (i + number) % 3 === 0) {
-      generatedHazards.push({
-        kind: (i + number) % 2 === 0 ? 'whale' : 'crocodile',
-        x: a.x + a.width + 2,
-        y: 548,
-        width: gapWidth - 4,
-        height: 95,
-        phase: rand() * Math.PI * 2,
-        active: true
-      });
-    }
-  }
-
-  return {
-    width,
-    difficulty,
-    platforms: list,
-    coins: generatedCoins,
-    enemies: generatedEnemies,
-    hazards: generatedHazards,
-    goal: {
-      x: width - 120,
-      y: 390,
-      width: 35,
-      height: 110
-    }
-  };
+  list.push(platform(width-360,500,360));
+  const generatedCoins=[]; list.forEach((p,i)=>{if(i===0||i===list.length-1)return;const amount=1+((i+number)%3===0?1:0);for(let j=0;j<amount;j++)generatedCoins.push({x:p.x+25+j*42,y:p.y-52,collected:false});});
+  const generatedEnemies=[]; for(let i=2;i<list.length-1;i++){const p=list[i];if(rand()<.40+difficulty*.50){const type=((i*7+number*11)%50)+1;generatedEnemies.push(enemy(type,p.x+20,p.y-46,p.x+8,p.x+p.width-50,1.15+difficulty*2.3+rand()*.7));}}
+  for(let i=4;i<list.length-1;i+=4){if(rand()<.35+difficulty*.4){const p=list[i],type=((i*13+number*17)%50)+1;generatedEnemies.push(enemy(type,p.x+p.width*.35,p.y-48,p.x+10,p.x+p.width-55,1.5+difficulty*2.6));}}
+  const generatedHazards=[]; for(let i=0;i<list.length-1;i++){const a=list[i],b=list[i+1],g=b.x-(a.x+a.width);if(g>85&&((i+number)%3===0))generatedHazards.push({kind:(i+number)%2===0?'whale':'crocodile',x:a.x+a.width+2,y:548,width:g-4,height:95,phase:rand()*Math.PI*2,active:true});}
+  const kinds=['fallingRock','swingingLog','spikeGate','movingWood','stairs','pit','wind','iceSlide','lavaVent','ghostGate']; const worldKind=kinds[(number-1)%kinds.length];
+  for(let i=0;i<3+Math.floor(difficulty*4);i++){const ox=900+i*(width/(4+Math.floor(difficulty*3)));generatedHazards.push({kind:worldKind,x:ox,y:worldKind==='fallingRock'?-80:470,width:worldKind==='stairs'?240:worldKind==='swingingLog'?150:110,height:worldKind==='fallingRock'?55:80,phase:i*1.7,active:true,timer:80+i*25,baseY:470,vy:0,triggered:false});}
+  return{width,difficulty,platforms:list,coins:generatedCoins,enemies:generatedEnemies,hazards:generatedHazards,goal:{x:width-120,y:390,width:35,height:110}};
 }
 
 
@@ -1771,7 +1579,10 @@ function checkLevelHazards() {
   return false;
 }
 
+function updateMovingPlatforms(){for(const p of platforms){if(!p.moving)continue;p.phase=(p.phase||0)+.02;p.x=p.baseX+Math.sin(p.phase)*(p.moveX||0);p.y=p.baseY+Math.sin(p.phase*1.35)*(p.moveY||55);}}
+
 function updatePlayer() {
+  updateMovingPlatforms();
   const ok = updatePlayerCore();
   if (!ok) return false;
   if (checkLevelHazards()) return false;
@@ -1783,266 +1594,25 @@ function updatePlayer() {
 // ENEMY UPDATE
 // ============================================================
 
-function updateEnemies() {
-
-  for (
-    const e of enemies
-  ) {
-
-    if (
-      !e.alive
-    ) {
-      continue;
-    }
-
-
-    // --------------------------------------------------------
-    // TYPES 1 / 2 / 5 / 7
-    // --------------------------------------------------------
-
-    if (
-      e.type === 1 ||
-      e.type === 2 ||
-      e.type === 5 ||
-      e.type === 7
-    ) {
-
-      e.x +=
-        e.speed *
-        e.direction;
-
-
-      if (
-        e.x <=
-        e.minX
-      ) {
-
-        e.x =
-          e.minX;
-
-        e.direction =
-          1;
-      }
-
-
-      if (
-        e.x >=
-        e.maxX
-      ) {
-
-        e.x =
-          e.maxX;
-
-        e.direction =
-          -1;
-      }
-    }
-
-
-    // --------------------------------------------------------
-    // GREEN JUMPER
-    // --------------------------------------------------------
-
-    if (
-      e.type === 3
-    ) {
-
-      e.x +=
-        e.speed *
-        e.direction;
-
-
-      if (
-        e.x <=
-        e.minX
-      ) {
-
-        e.x =
-          e.minX;
-
-        e.direction =
-          1;
-      }
-
-
-      if (
-        e.x >=
-        e.maxX
-      ) {
-
-        e.x =
-          e.maxX;
-
-        e.direction =
-          -1;
-      }
-
-
-      e.vy +=
-        e.gravity;
-
-
-      e.y +=
-        e.vy;
-
-
-      if (
-        e.y >=
-        e.baseY
-      ) {
-
-        e.y =
-          e.baseY;
-
-        e.vy =
-          -e.jumpPower;
-      }
-    }
-
-
-    // --------------------------------------------------------
-    // FLYING ENEMY
-    // --------------------------------------------------------
-
-    if (
-      e.type === 4
-    ) {
-
-      e.time +=
-        0.05;
-
-
-      e.y =
-        e.baseY +
-        Math.sin(
-          e.time
-        ) * 38;
-
-
-      e.x +=
-        e.speed *
-        e.direction;
-
-
-      if (
-        e.x <=
-        e.minX
-      ) {
-
-        e.direction =
-          1;
-      }
-
-
-      if (
-        e.x >=
-        e.maxX
-      ) {
-
-        e.direction =
-          -1;
-      }
-    }
-
-
-    // --------------------------------------------------------
-    // PINK ENEMY
-    // --------------------------------------------------------
-
-    if (
-      e.type === 6
-    ) {
-
-      e.time +=
-        0.08;
-
-
-      e.x +=
-        e.speed *
-        e.direction;
-
-
-      e.y =
-        e.baseY +
-        Math.sin(
-          e.time
-        ) * 20;
-
-
-      if (
-        e.x <=
-        e.minX
-      ) {
-
-        e.direction =
-          1;
-      }
-
-
-      if (
-        e.x >=
-        e.maxX
-      ) {
-
-        e.direction =
-          -1;
-      }
-    }
-
-
-    // --------------------------------------------------------
-    // COLLISION
-    // --------------------------------------------------------
-
-    if (
-      intersects(
-        player,
-        e
-      )
-    ) {
-
-      const playerBottom = player.y + player.height;
-      const previousBottom = playerBottom - player.vy;
-      const enemyTop = e.y;
-      const stompBand = Math.max(14, Math.min(24, e.height * 0.55));
-
-      // Reliable stomp detection for every enemy type.  A stomp is
-      // registered when the player is descending and crosses the top
-      // portion of the enemy, with a small tolerance for fast jumps.
-      const horizontalCenter = player.x + player.width / 2;
-      const horizontalOnEnemy =
-        horizontalCenter >= e.x - 8 &&
-        horizontalCenter <= e.x + e.width + 8;
-      const crossedEnemyTop =
-        previousBottom <= enemyTop + stompBand &&
-        playerBottom >= enemyTop;
-      const safeTopOverlap =
-        player.vy > 0 &&
-        playerBottom <= enemyTop + stompBand;
-
-      const stomp =
-        player.vy > 0 &&
-        horizontalOnEnemy &&
-        (crossedEnemyTop || safeTopOverlap);
-
-      if (stomp) {
-        // All enemies die from a successful stomp, including type 7.
-        e.alive = false;
-        e.hits = 0;
-        player.y = enemyTop - player.height;
-        player.vy = -10;
-        score += 100;
-        soundEnemyStomp();
-        updateHUD();
-      } else {
-        return false;
-      }
-    }
+function updateEnemies(){
+  for(const e of enemies){if(!e.alive)continue;const idx=e.type-1,d=.40+(currentLevel-1)*(.60/44),toPlayer=player.x<e.x?-1:1;
+    if(e.ability==='patrol')e.x+=e.speed*e.direction;
+    else if(e.ability==='jumper'){e.x+=e.speed*e.direction;e.vy+=e.gravity;e.y+=e.vy;if(e.y>=e.baseY){e.y=e.baseY;e.vy=-e.jumpPower;}}
+    else if(e.ability==='flyer'){e.time+=.06;e.y=e.baseY+Math.sin(e.time)*35;e.x+=e.speed*e.direction*.75;}
+    else if(e.ability==='chaser')e.x+=toPlayer*e.speed*.65;
+    else if(e.ability==='shooter'){e.x+=e.speed*e.direction*.3;e.shootTimer--;if(e.shootTimer<=0){e.shootTimer=90+(idx%6)*15;enemyProjectiles.push({x:e.x+e.width/2,y:e.y+15,w:12,h:7,vx:toPlayer*(4+d*3),life:150});}}
+    else if(e.ability==='ambush'){e.x+=toPlayer*(Math.abs(player.x-e.x)<420?e.speed*1.4:e.speed*.2);}
+    else if(e.ability==='dasher'){e.cooldown--;if(e.cooldown<=0){e.cooldown=90+(idx%5)*15;e.vx=toPlayer*e.speed*3.2;}e.vx=(e.vx||0)*.97;e.x+=e.vx;}
+    else if(e.ability==='teleporter'){e.teleportTimer--;if(e.teleportTimer<=0){e.teleportTimer=130+(idx%5)*20;e.x=Math.max(e.minX,Math.min(e.maxX,player.x+toPlayer*(80+(idx%4)*30)));}else e.x+=e.speed*e.direction*.3;}
+    else if(e.ability==='zigzag'){e.phase+=.08;e.x+=e.speed*e.direction;e.y=e.baseY+Math.sin(e.phase)*18;}
+    else e.x+=e.speed*e.direction*.45;
+    if(e.x<=e.minX){e.x=e.minX;e.direction=1;} if(e.x>=e.maxX){e.x=e.maxX;e.direction=-1;}
+    if(intersects(player,e)){const pb=player.y+player.height,prev=pb-player.vy,top=e.y,h=player.x+player.width/2>=e.x-8&&player.x+player.width/2<=e.x+e.width+8,stomp=player.vy>0&&h&&prev<=top+22&&pb>=top;if(stomp){e.alive=false;player.y=top-player.height;player.vy=-10;score+=100;soundEnemyStomp();updateHUD();}else return false;}
   }
-
-
+  for(let i=enemyProjectiles.length-1;i>=0;i--){const q=enemyProjectiles[i];q.x+=q.vx;q.life--;if(q.life<=0){enemyProjectiles.splice(i,1);continue;}if(intersects(player,q)){enemyProjectiles.splice(i,1);return false;}}
   return true;
 }
+let enemyProjectiles=[];
 
 
 // ============================================================
@@ -2724,10 +2294,9 @@ function drawBackgroundCore() {
 }
 
 
-function drawBackground() {
-  drawBackgroundCore();
-  drawLevelHazards();
-}
+function drawUniqueWorldFeature(){if(!currentWorld)return;const t=performance.now()*.001,f=currentWorld.feature;ctx.save();if(f==='snow'||f==='snowgust'){ctx.fillStyle='rgba(255,255,255,.55)';for(let i=0;i<45;i++){let x=(i*83-cameraX*.3+t*12)%canvas.width,y=(i*47+t*25)%canvas.height;ctx.fillRect(x,y,3,5);}}else if(f==='fireflies'||f==='moths'||f==='ghostsails'){ctx.fillStyle='rgba(255,240,130,.75)';for(let i=0;i<18;i++){let x=(i*131-cameraX*.22+t*18)%canvas.width,y=120+(i*67)%300+Math.sin(t+i)*18;ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();}}else if(f==='lightning'||f==='bolts'){if(Math.sin(t*3)>.82){ctx.fillStyle='rgba(255,255,220,.3)';ctx.fillRect(0,0,canvas.width,canvas.height);}}else if(f==='sandstorm'||f==='ash'){ctx.fillStyle='rgba(180,130,80,.22)';for(let i=0;i<20;i++){let x=(i*97-cameraX*.18+t*35)%canvas.width,y=220+(i*29)%260;ctx.fillRect(x,y,35,2);}}else if(f==='portal'||f==='void'){ctx.strokeStyle='rgba(190,70,150,.35)';ctx.lineWidth=5;for(let i=0;i<5;i++){ctx.beginPath();ctx.arc(canvas.width*.5,canvas.height*.42,55+i*18+Math.sin(t+i)*4,0,Math.PI*2);ctx.stroke();}}else{ctx.fillStyle='rgba(255,255,255,.10)';for(let i=0;i<12;i++){let x=(i*177-cameraX*.12)%canvas.width;ctx.fillRect(x,80+(i*61)%300,4,4);}}ctx.restore();}
+
+function drawBackground(){drawBackgroundCore();drawUniqueWorldFeature();drawLevelHazards();}
 
 
 function drawSwampWorld() {
@@ -4448,6 +4017,7 @@ function drawPlatforms() {
     }
 
 
+    if(p.wood){ctx.fillStyle="#7b4f2c";ctx.fillRect(x,p.y,p.width,p.height);ctx.fillStyle="#b97a45";ctx.fillRect(x,p.y,p.width,7);ctx.strokeStyle="rgba(50,25,10,.55)";ctx.lineWidth=2;for(let k=12;k<p.width;k+=28){ctx.beginPath();ctx.moveTo(x+k,p.y+6);ctx.lineTo(x+k-6,p.y+p.height-5);ctx.stroke();}} else {
     ctx.fillStyle =
       topColor;
 
@@ -4486,6 +4056,7 @@ function drawPlatforms() {
     );
 
 
+    }
     ctx.fillStyle =
       "rgba(0,0,0,.15)";
 
@@ -4677,120 +4248,23 @@ function drawCoins() {
 // ENEMIES DRAW
 // ============================================================
 
-function drawEnemies() {
-
-  for (const e of enemies) {
-    if (!e.alive) continue;
-
-    const x = e.x - cameraX;
-    const y = e.y;
-    const w = e.width;
-    const h = e.height;
-
-    ctx.save();
-
-    // Type 1: Wild boar - red/brown
-    if (e.type === 1) {
-      ctx.fillStyle = '#8d3f2f';
-      ctx.beginPath();
-      ctx.ellipse(x + w/2, y + h*0.58, w*0.47, h*0.34, 0, 0, Math.PI*2);
-      ctx.fill();
-      ctx.fillStyle = '#c46a4a';
-      ctx.beginPath();
-      ctx.ellipse(x + w*0.78, y + h*0.57, w*0.20, h*0.18, 0, 0, Math.PI*2);
-      ctx.fill();
-      ctx.fillStyle = '#5a261d';
-      ctx.beginPath();
-      ctx.moveTo(x+w*0.15,y+h*0.35); ctx.lineTo(x+w*0.28,y+h*0.05); ctx.lineTo(x+w*0.40,y+h*0.35);
-      ctx.moveTo(x+w*0.60,y+h*0.35); ctx.lineTo(x+w*0.74,y+h*0.05); ctx.lineTo(x+w*0.86,y+h*0.35);
-      ctx.fill();
-      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x+w*.68,y+h*.51,4,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(x+w*.69,y+h*.51,2,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#f4d3c3'; ctx.beginPath(); ctx.ellipse(x+w*.87,y+h*.61,6,4,0,0,Math.PI*2); ctx.fill();
-    }
-
-    // Type 2: Snake - blue
-    else if (e.type === 2) {
-      ctx.strokeStyle = '#1769aa';
-      ctx.lineWidth = 12;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(x+w*.08,y+h*.78);
-      ctx.quadraticCurveTo(x+w*.35,y+h*.25,x+w*.58,y+h*.70);
-      ctx.quadraticCurveTo(x+w*.72,y+h*.95,x+w*.90,y+h*.38);
-      ctx.stroke();
-      ctx.fillStyle='#2587d1';
-      ctx.beginPath(); ctx.ellipse(x+w*.88,y+h*.34,12,10,0,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x+w*.92,y+h*.30,3,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(x+w*.93,y+h*.30,1.5,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle='#e53935'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x+w*.99,y+h*.38); ctx.lineTo(x+w*1.07,y+h*.34); ctx.stroke();
-    }
-
-    // Type 3: Poison frog - green jumper
-    else if (e.type === 3) {
-      ctx.fillStyle = '#39a852';
-      ctx.beginPath(); ctx.ellipse(x+w/2,y+h*.62,w*.45,h*.34,0,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#8bc34a';
-      ctx.beginPath(); ctx.arc(x+w*.32,y+h*.28,10,0,Math.PI*2); ctx.arc(x+w*.68,y+h*.28,10,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x+w*.32,y+h*.28,5,0,Math.PI*2); ctx.arc(x+w*.68,y+h*.28,5,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(x+w*.32,y+h*.28,2.5,0,Math.PI*2); ctx.arc(x+w*.68,y+h*.28,2.5,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle='#d32f2f'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x+w*.38,y+h*.70); ctx.quadraticCurveTo(x+w*.5,y+h*.80,x+w*.62,y+h*.70); ctx.stroke();
-    }
-
-    // Type 4: Bat - purple flying animal
-    else if (e.type === 4) {
-      ctx.fillStyle='#6a1b9a';
-      ctx.beginPath();
-      ctx.moveTo(x+w*.5,y+h*.48);
-      ctx.quadraticCurveTo(x+w*.15,y+h*.05,x,y+h*.22);
-      ctx.quadraticCurveTo(x+w*.12,y+h*.48,x+w*.28,y+h*.60);
-      ctx.quadraticCurveTo(x+w*.5,y+h*.75,x+w*.72,y+h*.60);
-      ctx.quadraticCurveTo(x+w*.88,y+h*.48,x+w,y+h*.22);
-      ctx.quadraticCurveTo(x+w*.85,y+h*.05,x+w*.5,y+h*.48);
-      ctx.fill();
-      ctx.fillStyle='#ab47bc'; ctx.beginPath(); ctx.arc(x+w*.5,y+h*.42,12,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#ffeb3b'; ctx.beginPath(); ctx.arc(x+w*.43,y+h*.40,3,0,Math.PI*2); ctx.arc(x+w*.57,y+h*.40,3,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(x+w*.43,y+h*.40,1.5,0,Math.PI*2); ctx.arc(x+w*.57,y+h*.40,1.5,0,Math.PI*2); ctx.fill();
-    }
-
-    // Type 5: Scorpion - orange
-    else if (e.type === 5) {
-      ctx.fillStyle='#e65100';
-      ctx.beginPath(); ctx.ellipse(x+w*.5,y+h*.58,w*.32,h*.30,0,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle='#ff9800'; ctx.lineWidth=6; ctx.lineCap='round';
-      for(let i=0;i<3;i++){ const yy=y+h*(.35+i*.2); ctx.beginPath(); ctx.moveTo(x+w*.25,yy); ctx.lineTo(x+w*.05,yy-8); ctx.moveTo(x+w*.75,yy); ctx.lineTo(x+w*.95,yy-8); ctx.stroke(); }
-      ctx.strokeStyle='#e65100'; ctx.lineWidth=5; ctx.beginPath(); ctx.moveTo(x+w*.72,y+h*.35); ctx.quadraticCurveTo(x+w*1.05,y+h*.02,x+w*.78,y-h*.02); ctx.stroke();
-      ctx.fillStyle='#ff5722'; ctx.beginPath(); ctx.arc(x+w*.78,y+h*.02,6,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x+w*.40,y+h*.50,3,0,Math.PI*2); ctx.arc(x+w*.60,y+h*.50,3,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(x+w*.40,y+h*.50,1.5,0,Math.PI*2); ctx.arc(x+w*.60,y+h*.50,1.5,0,Math.PI*2); ctx.fill();
-    }
-
-    // Type 6: Wild wolf - pink/red-gray
-    else if (e.type === 6) {
-      ctx.fillStyle='#c62828';
-      ctx.beginPath(); ctx.ellipse(x+w*.5,y+h*.60,w*.38,h*.30,0,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(x+w*.18,y+h*.40); ctx.lineTo(x+w*.24,y+h*.02); ctx.lineTo(x+w*.40,y+h*.30); ctx.moveTo(x+w*.60,y+h*.30); ctx.lineTo(x+w*.78,y+h*.02); ctx.lineTo(x+w*.82,y+h*.40); ctx.fill();
-      ctx.fillStyle='#ef5350'; ctx.beginPath(); ctx.ellipse(x+w*.80,y+h*.57,w*.18,h*.15,0,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x+w*.66,y+h*.49,4,0,Math.PI*2); ctx.arc(x+w*.80,y+h*.49,4,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(x+w*.67,y+h*.49,2,0,Math.PI*2); ctx.arc(x+w*.81,y+h*.49,2,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x+w*.75,y+h*.67); ctx.lineTo(x+w*.75,y+h*.76); ctx.stroke();
-    }
-
-    // Type 7: Vulture - black/gold, two hits
-    else {
-      ctx.fillStyle='#263238';
-      ctx.beginPath(); ctx.ellipse(x+w*.5,y+h*.58,w*.36,h*.30,0,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#37474f';
-      ctx.beginPath(); ctx.moveTo(x+w*.40,y+h*.55); ctx.lineTo(x+w*.02,y+h*.25); ctx.lineTo(x+w*.20,y+h*.68); ctx.closePath(); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(x+w*.60,y+h*.55); ctx.lineTo(x+w*.98,y+h*.25); ctx.lineTo(x+w*.80,y+h*.68); ctx.closePath(); ctx.fill();
-      ctx.fillStyle='#f9a825'; ctx.beginPath(); ctx.arc(x+w*.5,y+h*.36,12,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(x+w*.45,y+h*.34,2.5,0,Math.PI*2); ctx.arc(x+w*.55,y+h*.34,2.5,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#ffca28'; ctx.beginPath(); ctx.moveTo(x+w*.55,y+h*.42); ctx.lineTo(x+w*.85,y+h*.48); ctx.lineTo(x+w*.55,y+h*.52); ctx.closePath(); ctx.fill();
-    }
-
-    ctx.restore();
-  }
+function drawEnemies(){
+  for(const e of enemies){if(!e.alive)continue;const x=e.x-cameraX,y=e.y,w=e.width,h=e.height;ctx.save();ctx.fillStyle=e.color;ctx.beginPath();
+    if(e.shape==='fang'){ctx.ellipse(x+w*.5,y+h*.58,w*.45,h*.32,0,0,Math.PI*2);ctx.fill();ctx.moveTo(x+w*.2,y+h*.35);ctx.lineTo(x+w*.08,y);ctx.lineTo(x+w*.34,y+h*.25);ctx.moveTo(x+w*.8,y+h*.35);ctx.lineTo(x+w*.92,y);ctx.lineTo(x+w*.66,y+h*.25);}
+    else if(e.shape==='horn'){ctx.ellipse(x+w*.5,y+h*.58,w*.43,h*.34,0,0,Math.PI*2);ctx.fill();ctx.moveTo(x+w*.3,y+h*.3);ctx.lineTo(x+w*.1,y-h*.1);ctx.lineTo(x+w*.42,y+h*.15);ctx.moveTo(x+w*.7,y+h*.3);ctx.lineTo(x+w*.9,y-h*.1);ctx.lineTo(x+w*.58,y+h*.15);}
+    else if(e.shape==='eye'){ctx.ellipse(x+w*.5,y+h*.5,w*.48,h*.38,0,0,Math.PI*2);ctx.fill();}
+    else if(e.shape==='mask'){ctx.roundRect(x+w*.08,y+h*.2,w*.84,h*.62,10);ctx.fill();}
+    else if(e.shape==='spike'){ctx.ellipse(x+w*.5,y+h*.62,w*.43,h*.3,0,0,Math.PI*2);ctx.fill();for(let k=0;k<5;k++){ctx.moveTo(x+w*(.12+k*.19),y+h*.35);ctx.lineTo(x+w*(.19+k*.19),y);ctx.lineTo(x+w*(.25+k*.19),y+h*.35);}}
+    else if(e.shape==='jaw'){ctx.ellipse(x+w*.5,y+h*.48,w*.44,h*.38,0,0,Math.PI*2);ctx.fill();}
+    else if(e.shape==='bat'){ctx.moveTo(x+w*.5,y+h*.55);ctx.lineTo(x,y+h*.2);ctx.lineTo(x+w*.18,y+h*.65);ctx.lineTo(x+w*.5,y+h*.45);ctx.lineTo(x+w*.82,y+h*.65);ctx.lineTo(x+w,y+h*.2);ctx.closePath();ctx.fill();}
+    else if(e.shape==='shell'){ctx.arc(x+w*.5,y+h*.58,w*.42,Math.PI,0);ctx.fill();ctx.fillRect(x+w*.12,y+h*.55,w*.76,h*.28);}
+    else if(e.shape==='tentacle'){ctx.ellipse(x+w*.5,y+h*.4,w*.35,h*.3,0,0,Math.PI*2);ctx.fill();ctx.lineWidth=6;ctx.strokeStyle=e.color;for(let k=0;k<4;k++){ctx.beginPath();ctx.moveTo(x+w*(.25+k*.17),y+h*.55);ctx.quadraticCurveTo(x+w*(.15+k*.2),y+h*.9,x+w*(.08+k*.28),y+h);ctx.stroke();}}
+    else {ctx.arc(x+w*.5,y+h*.55,w*.42,0,Math.PI*2);ctx.fill();}
+    ctx.fillStyle=e.accent;const eyes=1+(e.type%3);for(let k=0;k<eyes;k++){const ex=x+w*(.3+(k/Math.max(1,eyes-1))*.4);ctx.beginPath();ctx.arc(ex,y+h*.35,4+(e.type%3),0,Math.PI*2);ctx.fill();ctx.fillStyle='#111';ctx.beginPath();ctx.arc(ex,y+h*.35,1.5,0,Math.PI*2);ctx.fill();ctx.fillStyle=e.accent;}
+    if(e.ability==='shooter'){ctx.fillStyle=e.accent;ctx.fillRect(x+w*.85,y+h*.55,10,5);}ctx.restore();}
+  for(const q of enemyProjectiles){ctx.fillStyle='#ff4d4d';ctx.beginPath();ctx.arc(q.x-cameraX,q.y+3,5,0,Math.PI*2);ctx.fill();}
 }
+
 
 
 function drawEyes(
@@ -5065,7 +4539,7 @@ let smartStageCompleted = false;
 let smartStageStartTimeSafe = Date.now();
 
 function smartDifficulty() {
-  return 0.40 + ((currentLevel - 1) / 29) * 0.60;
+  return 0.40 + ((currentLevel - 1) / 44) * 0.60;
 }
 function smartRect(a){return{x:a.x,y:a.y,width:a.w,height:a.h};}
 function smartHit(a,b){return intersects(smartRect(a),smartRect(b));}
@@ -5078,7 +4552,7 @@ function smartResetStage(){
   smartStageCompleted=false; smartStageStartTimeSafe=Date.now();
   const w=currentLevelWidth||30000, d=smartDifficulty();
   const step=Math.max(4000,w*.11);
-  for(let i=0;i<2+Math.floor(d*5);i++){
+  for(let i=0;i<0;i++){
     smartEnemies.push({type:i%5,x:5200+i*step,y:485,w:46,h:48,vx:0,vy:0,
       hidden:false,attackTimer:70+i*35,shootTimer:100+i*30,jumpTimer:60+i*20});
   }
