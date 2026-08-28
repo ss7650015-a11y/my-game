@@ -2401,12 +2401,16 @@ function playerDied(reason = "enemy") {
   }
 
   if (lives > 0) {
-    // Continue the current stage without resetting enemies, coins, or progress.
+    // Keep all collected coins while the player still has hearts.
+    if (typeof saveShopState === "function") saveShopState();
     return;
   }
 
-  // All 3 hearts are gone: only now end the attempt and require restarting
-  // the CURRENT level from its beginning.
+  // All 3 hearts are gone: now (and only now) clear the current coin wallet
+  // and end the attempt. The next restart begins the current level fresh.
+  coins = 0;
+  updateHUD();
+  if (typeof saveShopState === "function") saveShopState();
   stopGame();
   gameOver = true;
   soundGameOver();
@@ -2467,6 +2471,8 @@ function restartGame() {
   ) {
 
     lives = 3;
+    coins = 0;
+    levelStartCoins = 0;
 
     gameOver = false;
 
@@ -5958,13 +5964,13 @@ setLanguage(selectedLanguage);
       display:none;
     `;
 
-    addonFireButton.textContent = "🔫";
+    addonFireButton.textContent = "🎒";
 
     addonFireButton.addEventListener(
       "pointerdown",
       event => {
         event.preventDefault();
-        fireLaser();
+        useActiveItem();
       }
     );
 
@@ -5980,9 +5986,10 @@ setLanguage(selectedLanguage);
       makeFireButton();
 
       if (addonFireButton) {
-        addonFireButton.style.display =
-          laserShots > 0 ? "block" : "none";
+        // The old laser button is replaced by the universal item-use button.
+        addonFireButton.style.display = "none";
       }
+      if (typeof updateUseButton === "function") updateUseButton();
 
       updateMainMenuButtonText();
 
@@ -6097,6 +6104,7 @@ setLanguage(selectedLanguage);
     starPacks: 0,
     invisibilityPacks: 0,
     activeItem: null,
+    activeTimedType: null,
     invincibleUntil: 0,
     invisibilityUntil: 0,
     speedUntil: 0,
@@ -6213,13 +6221,31 @@ setLanguage(selectedLanguage);
         font-weight:800;cursor:pointer;
       }
       #nbStoreButton, #nbUseButton {
-        position:fixed;top:12px;z-index:10002;width:48px;height:48px;border:0;border-radius:14px;
-        background:rgba(15,20,30,.86);color:#fff;font-size:24px;cursor:pointer;
-        box-shadow:0 4px 14px rgba(0,0,0,.28);
+        position:fixed;top:12px;z-index:10002;width:50px;height:50px;border:0;border-radius:15px;
+        background:linear-gradient(145deg,rgba(20,28,38,.96),rgba(5,10,16,.94));color:#fff;
+        font-size:24px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.30);
+        border:1px solid rgba(255,255,255,.16);transition:transform .15s ease,filter .15s ease;
       }
+      #nbStoreButton:hover, #nbUseButton:hover { transform:translateY(-1px) scale(1.04); filter:brightness(1.12); }
       #nbStoreButton { right:72px; }
-      #nbUseButton { right:126px; display:none; }
-      @media(max-width:700px){ #nbStoreButton{right:68px} #nbUseButton{right:122px} }
+      #nbUseButton { right:128px; display:none; }
+      #nbPowerTimer {
+        position:fixed; z-index:10002; display:none; min-width:86px; height:34px;
+        padding:6px 10px; border-radius:12px; background:rgba(15,20,30,.92); color:#fff;
+        font:900 14px system-ui,sans-serif; text-align:center; box-shadow:0 5px 16px rgba(0,0,0,.25);
+        border:1px solid rgba(255,255,255,.15); pointer-events:none;
+      }
+      #expansionShop .box { font-family:system-ui,Segoe UI,Arial,sans-serif; }
+      #expansionShop h2 { font-size:28px; margin:2px 0 8px; font-weight:900; }
+      #expansionShop p { font-size:16px; font-weight:800; margin:0 0 12px; }
+      #expansionShop button[data-buy] {
+        background:linear-gradient(135deg,#f7f9fc,#e8eef7); color:#18202a;
+        border:1px solid #d5dce6; font-size:16px; min-height:48px; text-align:right; padding:12px 15px;
+      }
+      #expansionShop button[data-buy]:hover { filter:brightness(.97); transform:translateY(-1px); }
+      #expansionShop button[data-close] { background:#263238; color:#fff; font-size:16px; }
+      @media(max-width:700px){ #nbStoreButton{right:68px} #nbUseButton{right:122px} #nbPowerTimer{right:178px;top:20px} }
+      @media(min-width:701px){ #nbPowerTimer{right:188px;top:72px} }
       .expansionTouch {
         position:fixed;bottom:70px;z-index:9999;border:0;border-radius:50%;
         width:48px;height:48px;font-size:20px;background:rgba(20,25,35,.82);
@@ -6272,7 +6298,11 @@ setLanguage(selectedLanguage);
       const b = document.createElement('button'); b.id='nbUseButton'; b.type='button'; b.title=t('استخدام العنصر','Use item');
       b.onclick=()=>useActiveItem(); document.body.appendChild(b);
     }
-    updateUseButton();
+    if (!document.getElementById('nbPowerTimer')) {
+      const timer = document.createElement('div'); timer.id='nbPowerTimer'; timer.setAttribute('aria-live','polite');
+      document.body.appendChild(timer);
+    }
+    updateUseButton(); updatePowerTimer();
   }
 
   function updateUseButton() {
@@ -6282,17 +6312,32 @@ setLanguage(selectedLanguage);
     const active=expansion.activeItem && counts[expansion.activeItem]>0 ? expansion.activeItem : null;
     b.style.display=(typeof gameRunning!=='undefined' && gameRunning && active)?'block':'none';
     b.textContent=active?icons[active]:'🎒';
-    b.title=active?t('استخدام '+icons[active],'Use '+icons[active]):t('لا يوجد عنصر','No item');
+    b.title=active?t('استخدام العنصر','Use item'):t('لا يوجد عنصر','No item');
+    b.setAttribute('aria-label', active ? t('استخدام العنصر','Use item') : t('لا يوجد عنصر','No item'));
+  }
+
+  function updatePowerTimer() {
+    const el=document.getElementById('nbPowerTimer');
+    if(!el) return;
+    const now=Date.now();
+    let until=0, icon='', label='';
+    if(now < Number(expansion.invisibilityUntil||0)) { until=Number(expansion.invisibilityUntil); icon='👻'; label=t('اختفاء','Invisible'); }
+    else if(now < Number(expansion.invincibleUntil||0)) { until=Number(expansion.invincibleUntil); icon=(expansion.activeTimedType==='star'?'⭐':'🛡️'); label=expansion.activeTimedType==='star'?t('نجمة','Star'):t('درع','Shield'); }
+    if(until>now) {
+      const sec=Math.ceil((until-now)/1000);
+      el.textContent=icon+' '+sec+'s';
+      el.title=label; el.style.display='block';
+    } else { el.style.display='none'; expansion.activeTimedType=null; }
   }
 
   function useActiveItem() {
     const type=expansion.activeItem; if(!type) return;
     const count=type==='shield'?expansion.shield:type==='laser'?expansion.laserPacks:type==='star'?expansion.starPacks:expansion.invisibilityPacks;
     if(count<=0){ expansion.activeItem=null; updateUseButton(); return; }
-    if(type==='shield'){ expansion.invincibleUntil=Math.max(expansion.invincibleUntil,Date.now()+10000); expansion.shield--; }
+    if(type==='shield'){ expansion.invincibleUntil=Math.max(expansion.invincibleUntil,Date.now()+10000); expansion.activeTimedType='shield'; expansion.shield--; }
     if(type==='laser'){ if(typeof laserShots!=='undefined') laserShots=Math.min(5,Number(laserShots||0)+5); expansion.laserPacks--; }
-    if(type==='star'){ expansion.invincibleUntil=Math.max(expansion.invincibleUntil,Date.now()+10000); expansion.starPacks--; }
-    if(type==='invisibility'){ expansion.invisibilityUntil=Date.now()+5000; expansion.invisibilityPacks--; }
+    if(type==='star'){ expansion.invincibleUntil=Math.max(expansion.invincibleUntil,Date.now()+10000); expansion.activeTimedType='star'; expansion.starPacks--; }
+    if(type==='invisibility'){ expansion.invisibilityUntil=Date.now()+5000; expansion.activeTimedType='invisibility'; expansion.invisibilityPacks--; }
     if((type==='shield'&&expansion.shield<=0)||(type==='laser'&&expansion.laserPacks<=0)||(type==='star'&&expansion.starPacks<=0)||(type==='invisibility'&&expansion.invisibilityPacks<=0)) expansion.activeItem=null;
     saveShopState(); updateUseButton();
     announce(t('تم استخدام العنصر!','Item used!'));
@@ -6364,6 +6409,7 @@ setLanguage(selectedLanguage);
     if (stars) stars.textContent = `⭐ ${expansion.stageStars}`;
     if (shield) shield.textContent = `🛡️ ${expansion.shield}`;
     updateUseButton();
+    updatePowerTimer();
   }
 
   function resetStageExtras() {
@@ -6371,6 +6417,8 @@ setLanguage(selectedLanguage);
     expansion.stageStartTime = Date.now();
     expansion.stageStars = 0;
     expansion.invincibleUntil = 0;
+    expansion.invisibilityUntil = 0;
+    expansion.activeTimedType = null;
     expansion.speedUntil = 0;
     expansion.jumpUntil = 0;
     expansion.bossDefeated = false;
@@ -6560,6 +6608,7 @@ setLanguage(selectedLanguage);
   document.addEventListener("keydown", e => {
     if (e.key === "p" || e.key === "P") { if (typeof gameRunning !== 'undefined' && gameRunning) openShop(); }
     if (e.key === "e" || e.key === "E") useActiveItem();
+    if (e.key === "Escape") { const sh=document.getElementById("expansionShop"); if(sh) sh.style.display="none"; }
     if (e.key === "s" || e.key === "S") {
       if (typeof gameRunning !== "undefined" && gameRunning) {
         expansion.invincibleUntil = Date.now() + 12000;
@@ -8392,9 +8441,7 @@ setLanguage(selectedLanguage);
       e.preventDefault();
       e.stopPropagation();
       try { initAudio(); } catch (_) {}
-      if (typeof fireLaser === 'function' && typeof laserShots !== 'undefined' && laserShots > 0) {
-        fireLaser();
-      }
+      if (typeof useActiveItem === 'function') useActiveItem();
       button.classList.add('nb-pressed');
       try { button.setPointerCapture(e.pointerId); } catch (_) {}
     }, {passive:false});
@@ -8418,7 +8465,7 @@ setLanguage(selectedLanguage);
     const right = makeButton('nbTouchRight','▶','right');
     const run = makeButton('nbTouchRun','🏃','run');
     const jump = makeButton('nbTouchJump','⬆','jump');
-    const fire = makeButton('nbTouchFire','🔫','fire');
+    const fire = makeButton('nbTouchFire','🎒','fire');
 
     controls.append(left,right,run,jump,fire);
     document.body.appendChild(controls);
