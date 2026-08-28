@@ -2355,6 +2355,7 @@ let respawnCheckpointY = 400;
 // This is used for life-loss respawns so a death never sends the player back to 100.
 let lastSafeX = 100;
 let lastSafeY = 400;
+let damageInvulnerableUntil = 0;
 
 function setRespawnCheckpointFromDeath() {
   // Respawn near the latest safe position, not at the beginning of the stage.
@@ -2366,82 +2367,46 @@ function setRespawnCheckpointFromDeath() {
   respawnCheckpointY = Math.max(0, Math.min(520, sourceY));
 }
 
-function playerDied() {
+function playerDied(reason = "enemy") {
 
-  if (
-    gameOver ||
-    gameWon ||
-    changingLevel
-  ) {
+  if (gameOver || gameWon || changingLevel) return;
+  if (Date.now() < damageInvulnerableUntil) return;
 
-    return;
-  }
-
-
-  setRespawnCheckpointFromDeath();
-
-  stopGame();
-
-
+  // Losing a heart no longer resets/reloads the level. The player keeps
+  // playing from the exact position where the hit happened.
+  lives--;
+  damageInvulnerableUntil = Date.now() + 1200;
+  updateHUD();
   soundDamage();
 
+  // Only hazards/falling need a safety recovery. Enemy hits do NOT move
+  // the player, so the player can keep fighting immediately.
+  if (reason !== "enemy") {
+    player.x = Math.max(100, Math.min(currentLevelWidth - player.width - 20, lastSafeX));
+    player.y = Math.max(0, Math.min(520, lastSafeY));
+    player.vx = 0;
+    player.vy = 0;
+    player.ground = false;
+  }
 
-  lives--;
-
-
-  updateHUD();
-
-
-  if (
-    lives > 0
-  ) {
-
-    setTimeout(() => {
-
-      resetCurrentLevel();
-
-      startGame();
-
-    }, 350);
-
-
+  if (lives > 0) {
+    // Continue the current stage without resetting enemies, coins, or progress.
     return;
   }
 
-
-  // ----------------------------------------------------------
-  // GAME OVER
-  // ----------------------------------------------------------
-
+  // All 3 hearts are gone: only now end the attempt and require restarting
+  // the CURRENT level from its beginning.
+  stopGame();
   gameOver = true;
-
-
   soundGameOver();
-
-
-  messageIcon.textContent =
-    "💀";
-
-
-  messageTitle.textContent =
-    menuText[selectedLanguage].gameOver;
-
-
+  messageIcon.textContent = "💀";
+  messageTitle.textContent = menuText[selectedLanguage].gameOver;
   messageText.textContent =
-    "خسرت الأرواح الثلاثة في المرحلة " +
-    currentLevel +
-    ". اضغط الزر للبدء من جديد بثلاث أرواح.";
-
-
-  restartButton.textContent =
-    menuText[selectedLanguage].restart;
-
-
-  message.classList.remove(
-    "hidden"
-  );
+    "خسرت الأرواح الثلاثة في المرحلة " + currentLevel +
+    ". اضغط الزر للبدء من جديد من أول المرحلة.";
+  restartButton.textContent = menuText[selectedLanguage].restart;
+  message.classList.remove("hidden");
 }
-
 
 // ============================================================
 // RESET CURRENT LEVEL
@@ -5272,7 +5237,11 @@ function loop() {
     !updatePlayer()
   ) {
 
-    playerDied();
+    playerDied("hazard");
+
+    // A hazard/fall recovery has already been applied; keep the game running
+    // when hearts remain.
+    if (gameOver) return;
 
     return;
   }
@@ -5289,8 +5258,11 @@ function loop() {
     !updateEnemies()
   ) {
 
-    playerDied();
+    playerDied("enemy");
 
+    if (gameOver) return;
+
+    // Enemy damage only removes a heart; do not reset the stage.
     return;
   }
 
