@@ -6218,6 +6218,7 @@ setLanguage(selectedLanguage);
     style.id = "expansionStyle";
     style.textContent = `
       #score{display:none!important;}
+      #laserControl{display:none!important;}
       #expansionHud {
         position:fixed;left:12px;top:112px;z-index:9998;
         display:flex;gap:7px;flex-wrap:wrap;max-width:48%;
@@ -6250,6 +6251,9 @@ setLanguage(selectedLanguage);
       #nbStoreButton:hover, #nbUseButton:hover { transform:translateY(-1px) scale(1.04); filter:brightness(1.12); }
       #nbStoreButton { right:72px; }
       #nbUseButton { right:128px; display:none; }
+      @media (max-width:700px) and (pointer:coarse){
+        #nbStoreButton, #nbUseButton { display:none !important; }
+      }
       #nbPowerTimer {
         position:fixed; z-index:10002; display:none; min-width:86px; height:34px;
         padding:6px 10px; border-radius:12px; background:rgba(15,20,30,.92); color:#fff;
@@ -6365,16 +6369,16 @@ setLanguage(selectedLanguage);
       if (!gameRunning || gameOver || gameWon) return;
       let shots = typeof window.__shopLaserGetShots === 'function'
         ? window.__shopLaserGetShots() : 0;
-      if (shots <= 0) {
-        if (Number(expansion.laserPacks || 0) <= 0) {
-          expansion.activeItem = null;
-          updateUseButton();
-          saveShopState();
-          return;
-        }
+      if (shots <= 0 && Number(expansion.laserPacks || 0) > 0) {
         expansion.laserPacks--;
         shots = typeof window.__shopLaserAddShots === 'function'
           ? window.__shopLaserAddShots(5) : 0;
+      }
+      if (shots <= 0) {
+        expansion.activeItem = null;
+        updateUseButton();
+        saveShopState();
+        return;
       }
       if (typeof window.__shopLaserFire === 'function') {
         window.__shopLaserFire();
@@ -6439,7 +6443,10 @@ setLanguage(selectedLanguage);
         if(getWallet()<cost){ announce(t("العملات غير كافية","Not enough coins")); return; }
         coins-=cost;
         if(type==='shield') expansion.shield++;
-        if(type==='laser') expansion.laserPacks++;
+        if(type==='laser') {
+          expansion.laserPacks++;
+          if (typeof window.__shopLaserAddShots === 'function') window.__shopLaserAddShots(5);
+        }
         if(type==='flight') expansion.flightPacks++;
         if(type==='invisibility') expansion.invisibilityPacks++;
         expansion.activeItem=type;
@@ -6739,6 +6746,20 @@ setLanguage(selectedLanguage);
     updateUseButton();
     updatePowerTimer();
   }, 250);
+  // Public bridges for mobile/desktop controls. These keep the expansion
+  // inventory private while allowing the touch UI to invoke it safely.
+  window.__nbShopOpen = openShop;
+  window.__nbShopUse = useActiveItem;
+  window.__nbShopGetActive = function(){
+    const type = expansion.activeItem;
+    if(!type) return null;
+    const has = type==='shield' ? expansion.shield>0 :
+                type==='laser' ? (expansion.laserPacks>0 || (typeof window.__shopLaserGetShots==='function' && window.__shopLaserGetShots()>0)) :
+                type==='flight' ? expansion.flightPacks>0 :
+                type==='invisibility' ? expansion.invisibilityPacks>0 : false;
+    return has ? type : null;
+  };
+
 })();
 
 
@@ -8456,8 +8477,10 @@ setLanguage(selectedLanguage);
       #nbTouchLeft{left:max(14px,env(safe-area-inset-left));bottom:max(18px,calc(18px + env(safe-area-inset-bottom)));}
       #nbTouchRight{left:88px;bottom:max(18px,calc(18px + env(safe-area-inset-bottom)));}
       #nbTouchRun{right:88px;bottom:max(18px,calc(18px + env(safe-area-inset-bottom)));}
+      #nbTouchUse{right:14px;bottom:max(18px,calc(18px + env(safe-area-inset-bottom)));}
+      #nbTouchStore{right:160px;bottom:max(18px,calc(18px + env(safe-area-inset-bottom)));}
       #nbTouchJump{right:14px;bottom:max(92px,calc(92px + env(safe-area-inset-bottom)));}
-      #nbTouchFire{right:14px;bottom:max(18px,calc(18px + env(safe-area-inset-bottom)));}
+      #nbTouchFire{display:none !important;}
       @media (min-width: 900px) and (pointer: coarse){
         .nb-touch-btn{width:70px;height:70px;}
       }
@@ -8528,7 +8551,7 @@ setLanguage(selectedLanguage);
       e.preventDefault();
       e.stopPropagation();
       try { initAudio(); } catch (_) {}
-      if (typeof useActiveItem === 'function') useActiveItem();
+      if (typeof window.__nbShopUse === 'function') window.__nbShopUse();
       button.classList.add('nb-pressed');
       try { button.setPointerCapture(e.pointerId); } catch (_) {}
     }, {passive:false});
@@ -8552,16 +8575,26 @@ setLanguage(selectedLanguage);
     const right = makeButton('nbTouchRight','▶','right');
     const run = makeButton('nbTouchRun','🏃','run');
     const jump = makeButton('nbTouchJump','⬆','jump');
-    const fire = makeButton('nbTouchFire','🎒','fire');
-
-    controls.append(left,right,run,jump,fire);
+    const use = makeButton('nbTouchUse','🎒','use');
+    const store = makeButton('nbTouchStore','🛒','store');
+    controls.append(left,right,run,use,store,jump);
     document.body.appendChild(controls);
 
     bindHold(left,'arrowleft');
     bindHold(right,'arrowright');
     bindHold(run,'shift');
     bindJump(jump);
-    bindFire(fire);
+    bindFire(use);
+    store.addEventListener('pointerdown', e => {
+      e.preventDefault(); e.stopPropagation();
+      try { initAudio(); } catch (_) {}
+      if (typeof window.__nbShopOpen === 'function') window.__nbShopOpen();
+      store.classList.add('nb-pressed');
+      try { store.setPointerCapture(e.pointerId); } catch (_) {}
+    }, {passive:false});
+    ['pointerup','pointercancel','pointerleave'].forEach(type => store.addEventListener(type, e => {
+      e.preventDefault(); store.classList.remove('nb-pressed');
+    }, {passive:false}));
 
     window.addEventListener('blur', releaseAll);
     document.addEventListener('visibilitychange', () => {
@@ -8575,7 +8608,17 @@ setLanguage(selectedLanguage);
     controls.style.display = active ? 'block' : 'none';
     if (!active) releaseAll();
     const fire = document.getElementById('nbTouchFire');
-    if (fire) { fire.style.display = 'none'; }
+    if (fire) fire.style.display = 'none';
+    const use = document.getElementById('nbTouchUse');
+    if (use) {
+      const icons = {shield:'🛡️',laser:'🔫',flight:'✈️',invisibility:'👻'};
+      const type = typeof window.__nbShopGetActive === 'function' ? window.__nbShopGetActive() : null;
+      use.textContent = type ? icons[type] : '🎒';
+      use.title = type ? 'استخدام العنصر' : 'لا يوجد عنصر';
+      use.style.display = active && type ? 'block' : 'none';
+    }
+    const store = document.getElementById('nbTouchStore');
+    if (store) store.style.display = active ? 'block' : 'none';
     if (typeof updateUseButton === 'function') updateUseButton();
   }
 
