@@ -1951,62 +1951,40 @@ function updateEnemies() {
       )
     ) {
 
-      const previousBottom =
-        player.y +
-        player.height -
-        player.vy;
+      const playerBottom = player.y + player.height;
+      const previousBottom = playerBottom - player.vy;
+      const enemyTop = e.y;
+      const stompBand = Math.max(14, Math.min(24, e.height * 0.55));
 
+      // Reliable stomp detection for every enemy type.  A stomp is
+      // registered when the player is descending and crosses the top
+      // portion of the enemy, with a small tolerance for fast jumps.
+      const horizontalCenter = player.x + player.width / 2;
+      const horizontalOnEnemy =
+        horizontalCenter >= e.x - 8 &&
+        horizontalCenter <= e.x + e.width + 8;
+      const crossedEnemyTop =
+        previousBottom <= enemyTop + stompBand &&
+        playerBottom >= enemyTop;
+      const safeTopOverlap =
+        player.vy > 0 &&
+        playerBottom <= enemyTop + stompBand;
 
       const stomp =
         player.vy > 0 &&
-        previousBottom <=
-        e.y + 12;
-
+        horizontalOnEnemy &&
+        (crossedEnemyTop || safeTopOverlap);
 
       if (stomp) {
-
-        player.vy =
-          -10;
-
-
+        // All enemies die from a successful stomp, including type 7.
+        e.alive = false;
+        e.hits = 0;
+        player.y = enemyTop - player.height;
+        player.vy = -10;
+        score += 100;
         soundEnemyStomp();
-
-
-        if (
-          e.type === 7
-        ) {
-
-          e.hits--;
-
-          score += 100;
-
-
-          if (
-            e.hits <= 0
-          ) {
-
-            e.alive =
-              false;
-
-            score += 300;
-          }
-
-        } else {
-
-          e.alive =
-            false;
-
-          score +=
-            50 * e.type;
-        }
-
-
         updateHUD();
-
-      }
-
-      else {
-
+      } else {
         return false;
       }
     }
@@ -7272,111 +7250,163 @@ setLanguage(selectedLanguage);
 
 
 
-/* --- 3D-inspired character rendering --- */
-(function installCharacter3D() {
-  const oldDrawPlayer = drawPlayer;
+/* --- Final player renderer: small child, true side profile --- */
+(function installCharacter3DFinal() {
   drawPlayer = function() {
     const x = player.x - cameraX;
-    // Character's feet are aligned exactly with the collision bottom.
     const footY = player.y + player.height;
     const dir = player.direction < 0 ? -1 : 1;
-    const moving = !!player.running && !!player.ground;
-    const t = performance.now() * 0.018;
-    const bob = moving ? Math.sin(t) * 1.5 : 0;
+    const moving = Math.abs(player.vx) > 0.2;
+    const running = player.running && Math.abs(player.vx) > 2 && player.ground;
+    const t = performance.now();
+
+    // No sweat, breathing, looking-back, or idle bobbing.
+    const stride = running ? Math.sin(t * 0.035) * 4.5 : 0;
+    const armSwing = running ? Math.sin(t * 0.035 + Math.PI) * 3.0 : (moving ? Math.sin(t * 0.018) * 1.2 : 0);
 
     ctx.save();
 
-    // Ground contact shadow — makes it clear the character is standing on grass.
+    // Ground shadow.
     ctx.fillStyle = "rgba(0,0,0,.22)";
     ctx.beginPath();
-    ctx.ellipse(x + player.width / 2, footY + 1, 17, 4.5, 0, 0, Math.PI * 2);
+    ctx.ellipse(x + player.width / 2, footY + 1, 16, 4.2, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.translate(x + player.width / 2, player.y + bob);
+    // Side-facing body.  The character always faces the last movement direction.
+    ctx.translate(x + player.width / 2, player.y);
     ctx.scale(dir, 1);
 
-    // legs with depth shading
-    ctx.strokeStyle = "#22272b";
-    ctx.lineWidth = 7;
+    // Rear leg: mostly hidden, but still visibly attached so it never looks amputated.
+    ctx.strokeStyle = "#111820";
+    ctx.lineWidth = 6;
     ctx.lineCap = "round";
-    const stride = moving ? Math.sin(t * 1.8) * 4.5 : 0;
     ctx.beginPath();
-    ctx.moveTo(-5, 27); ctx.lineTo(-7 - stride, 39);
-    ctx.moveTo(7, 27); ctx.lineTo(9 + stride, 39);
+    ctx.moveTo(-1, 29);
+    ctx.lineTo(-2, 39);
+    ctx.stroke();
+    ctx.strokeStyle = "#20262b";
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(-4, 40);
+    ctx.lineTo(3, 40);
     ctx.stroke();
 
-    ctx.strokeStyle = "#0e1215";
+    // Front leg.
+    ctx.strokeStyle = "#151b20";
     ctx.lineWidth = 7;
     ctx.beginPath();
-    ctx.moveTo(-11 - stride, 40); ctx.lineTo(1 - stride, 40);
-    ctx.moveTo(5 + stride, 40); ctx.lineTo(16 + stride, 40);
+    ctx.moveTo(6, 28);
+    ctx.lineTo(7 + stride, 40);
+    ctx.stroke();
+    ctx.strokeStyle = "#20252a";
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(4 + stride, 40);
+    ctx.lineTo(15 + stride, 40);
     ctx.stroke();
 
-    // shirt with gradient
-    const shirt = ctx.createLinearGradient(-18, 0, 18, 30);
-    shirt.addColorStop(0, "#ff9b4b");
-    shirt.addColorStop(.55, "#ed642b");
-    shirt.addColorStop(1, "#a83c20");
-    ctx.fillStyle = shirt;
+    // Black trousers.
+    ctx.fillStyle = "#101418";
     ctx.beginPath();
-    ctx.roundRect(-17, 2, 34, 29, 8);
+    ctx.roundRect(-13, 23, 25, 11, 4);
     ctx.fill();
 
-    // arm
-    const skin = ctx.createLinearGradient(-5, -5, 20, 25);
+    // Red sweater.
+    const shirt = ctx.createLinearGradient(-15, 0, 16, 30);
+    shirt.addColorStop(0, "#ff4545");
+    shirt.addColorStop(0.55, "#e51f2a");
+    shirt.addColorStop(1, "#9d121c");
+    ctx.fillStyle = shirt;
+    ctx.beginPath();
+    ctx.roundRect(-15, 2, 30, 27, 8);
+    ctx.fill();
+
+    // Collar.
+    ctx.fillStyle = "#b5121b";
+    ctx.beginPath();
+    ctx.arc(3, 2, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // One visible front arm; rear arm stays behind the torso.
+    const skin = ctx.createLinearGradient(4, 2, 23, 25);
     skin.addColorStop(0, "#ffd0aa");
     skin.addColorStop(1, "#c97955");
     ctx.strokeStyle = skin;
     ctx.lineWidth = 7;
     ctx.beginPath();
-    ctx.moveTo(10, 10); ctx.lineTo(20, 21);
+    ctx.moveTo(10, 9);
+    ctx.lineTo(19 + armSwing, 20);
     ctx.stroke();
 
-    // neck/head
+    // Neck.
+    ctx.fillStyle = "#e6a77f";
+    ctx.fillRect(3, -5, 8, 9);
+
+    // Child head in side profile.
     ctx.fillStyle = skin;
-    ctx.fillRect(3, -5, 9, 10);
     ctx.beginPath();
-    ctx.arc(7, -13, 17, 0, Math.PI * 2);
+    ctx.arc(5, -13, 16, 0, Math.PI * 2);
     ctx.fill();
 
-    // hair
-    ctx.fillStyle = "#2a1d18";
+    // Ear.
+    ctx.fillStyle = "#d8926d";
+    ctx.beginPath();
+    ctx.arc(-7, -10, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Hair.
+    ctx.fillStyle = "#2a1c17";
     ctx.beginPath();
     ctx.arc(-1, -24, 13, Math.PI, Math.PI * 2);
     ctx.fill();
 
-    // cap
-    const cap = ctx.createLinearGradient(-10, -38, 15, -20);
+    // Red cap facing forward.
+    const cap = ctx.createLinearGradient(-9, -38, 15, -20);
     cap.addColorStop(0, "#ff4b43");
-    cap.addColorStop(.55, "#e72f2f");
+    cap.addColorStop(0.55, "#e72f2f");
     cap.addColorStop(1, "#941c1c");
     ctx.fillStyle = cap;
     ctx.beginPath();
-    ctx.arc(3, -28, 15, Math.PI, Math.PI * 2);
+    ctx.arc(2, -28, 14, Math.PI, Math.PI * 2);
     ctx.fill();
-    ctx.fillRect(-9, -28, 23, 6);
+    ctx.fillRect(-9, -28, 22, 6);
 
-    ctx.fillStyle = "#a91d1d";
-    ctx.beginPath();
-    ctx.ellipse(18, -22, 12, 4, -.08, 0, Math.PI * 2);
-    ctx.fill();
-
-    // face profile
+    // One eye and small nose establish the side direction.
     ctx.fillStyle = "#fff";
-    ctx.beginPath(); ctx.arc(15, -14, 4.3, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#171717";
-    ctx.beginPath(); ctx.arc(16, -14, 2, 0, Math.PI * 2); ctx.fill();
-
-    ctx.fillStyle = "#d9926c";
     ctx.beginPath();
-    ctx.moveTo(22, -12); ctx.lineTo(29, -9); ctx.lineTo(22, -7);
-    ctx.closePath(); ctx.fill();
+    ctx.arc(14, -14, 4.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#171717";
+    ctx.beginPath();
+    ctx.arc(15, -14, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#d8926d";
+    ctx.beginPath();
+    ctx.moveTo(20, -12);
+    ctx.lineTo(27, -9);
+    ctx.lineTo(20, -7);
+    ctx.closePath();
+    ctx.fill();
 
     ctx.restore();
+
+    // Running dust remains only while actually running.
+    if (running) {
+      ctx.save();
+      for (let i = 0; i < 3; i++) {
+        const a = t * 0.012 + i * 2.1;
+        const px = x + player.width / 2 - dir * (17 + i * 7);
+        const py = footY - 2 + Math.sin(a) * 2;
+        const r = 2.2 + i * 0.7;
+        ctx.fillStyle = "rgba(235,215,180,.72)";
+        ctx.beginPath();
+        ctx.arc(px, py, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
   };
 })();
-
-
 
 /* --- Single 3D-inspired crocodile --- */
 (function installCrocodile3D() {
