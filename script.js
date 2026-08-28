@@ -2087,7 +2087,7 @@ function updateCoins() {
         true;
 
 
-      coins++;
+      coins += 5;
 
       score += 50;
 
@@ -2375,7 +2375,7 @@ function playerDied(reason = "enemy") {
     if (Date.now() < (expansion.invisibilityUntil || 0) || Date.now() < (expansion.invincibleUntil || 0)) return;
     if (Number(expansion.shield || 0) > 0) {
       expansion.shield--;
-      expansion.activeItem = expansion.shield > 0 ? "shield" : (expansion.laserPacks > 0 ? "laser" : (expansion.starPacks > 0 ? "star" : (expansion.invisibilityPacks > 0 ? "invisibility" : null)));
+      expansion.activeItem = expansion.shield > 0 ? "shield" : (expansion.laserPacks > 0 ? "laser" : (expansion.flightPacks > 0 ? "flight" : (expansion.invisibilityPacks > 0 ? "invisibility" : null)));
       damageInvulnerableUntil = Date.now() + 900;
       if (typeof saveShopState === "function") saveShopState();
       if (typeof updateUseButton === "function") updateUseButton();
@@ -6088,7 +6088,7 @@ setLanguage(selectedLanguage);
   const shop = {
     shield: 25,
     laser: 30,
-    star: 35,
+    flight: 35,
     invisibility: 45
   };
 
@@ -6101,12 +6101,14 @@ setLanguage(selectedLanguage);
     bonusCoins: 0,
     shield: 0,
     laserPacks: 0,
-    starPacks: 0,
+    flightPacks: 0,
     invisibilityPacks: 0,
     activeItem: null,
     activeTimedType: null,
     invincibleUntil: 0,
     invisibilityUntil: 0,
+    flightUntil: 0,
+    flightAltitude: 270,
     speedUntil: 0,
     jumpUntil: 0,
     powerUp: null,
@@ -6260,8 +6262,8 @@ setLanguage(selectedLanguage);
     const hud = document.createElement("div");
     hud.id = "expansionHud";
     hud.innerHTML = `
-      <span id="expStars">⭐ 0</span>
       <span id="expShield">🛡️ 0</span>
+      <span id="expFlight">✈️ 0</span>
     `;
     document.body.appendChild(hud);
   }
@@ -6271,7 +6273,7 @@ setLanguage(selectedLanguage);
   function saveShopState() {
     try {
       const data = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}");
-      data.shopInventory = { shield: expansion.shield, laser: expansion.laserPacks, star: expansion.starPacks, invisibility: expansion.invisibilityPacks };
+      data.shopInventory = { shield: expansion.shield, laser: expansion.laserPacks, flight: expansion.flightPacks, invisibility: expansion.invisibilityPacks };
       data.shopActive = expansion.activeItem;
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     } catch (_) {}
@@ -6283,7 +6285,7 @@ setLanguage(selectedLanguage);
       const inv = data.shopInventory || {};
       expansion.shield = Number(inv.shield || data.shield || 0);
       expansion.laserPacks = Number(inv.laser || 0);
-      expansion.starPacks = Number(inv.star || 0);
+      expansion.flightPacks = Number(inv.flight || inv.star || 0);
       expansion.invisibilityPacks = Number(inv.invisibility || 0);
       expansion.activeItem = data.shopActive || null;
     } catch (_) {}
@@ -6307,8 +6309,8 @@ setLanguage(selectedLanguage);
 
   function updateUseButton() {
     const b=document.getElementById('nbUseButton'); if(!b) return;
-    const icons={shield:'🛡️',laser:'🔫',star:'⭐',invisibility:'👻'};
-    const counts={shield:expansion.shield,laser:expansion.laserPacks,star:expansion.starPacks,invisibility:expansion.invisibilityPacks};
+    const icons={shield:'🛡️',laser:'🔫',flight:'✈️',invisibility:'👻'};
+    const counts={shield:expansion.shield,laser:expansion.laserPacks,flight:expansion.flightPacks,invisibility:expansion.invisibilityPacks};
     const active=expansion.activeItem && counts[expansion.activeItem]>0 ? expansion.activeItem : null;
     b.style.display=(typeof gameRunning!=='undefined' && gameRunning && active)?'block':'none';
     b.textContent=active?icons[active]:'🎒';
@@ -6322,7 +6324,8 @@ setLanguage(selectedLanguage);
     const now=Date.now();
     let until=0, icon='', label='';
     if(now < Number(expansion.invisibilityUntil||0)) { until=Number(expansion.invisibilityUntil); icon='👻'; label=t('اختفاء','Invisible'); }
-    else if(now < Number(expansion.invincibleUntil||0)) { until=Number(expansion.invincibleUntil); icon=(expansion.activeTimedType==='star'?'⭐':'🛡️'); label=expansion.activeTimedType==='star'?t('نجمة','Star'):t('درع','Shield'); }
+    else if(now < Number(expansion.flightUntil||0)) { until=Number(expansion.flightUntil); icon='✈️'; label=t('طيران','Flight'); }
+    else if(now < Number(expansion.invincibleUntil||0)) { until=Number(expansion.invincibleUntil); icon='🛡️'; label=t('درع','Shield'); }
     if(until>now) {
       const sec=Math.ceil((until-now)/1000);
       el.textContent=icon+' '+sec+'s';
@@ -6332,15 +6335,15 @@ setLanguage(selectedLanguage);
 
   function useActiveItem() {
     const type=expansion.activeItem; if(!type) return;
-    const count=type==='shield'?expansion.shield:type==='laser'?expansion.laserPacks:type==='star'?expansion.starPacks:expansion.invisibilityPacks;
+    const count=type==='shield'?expansion.shield:type==='laser'?expansion.laserPacks:type==='flight'?expansion.flightPacks:expansion.invisibilityPacks;
     if(count<=0){ expansion.activeItem=null; updateUseButton(); return; }
-    if(type==='shield'){ expansion.invincibleUntil=Math.max(expansion.invincibleUntil,Date.now()+10000); expansion.activeTimedType='shield'; expansion.shield--; }
+    if(type==='shield'){ expansion.invincibleUntil=Date.now()+10000; expansion.activeTimedType='shield'; expansion.shield--; }
     if(type==='laser'){ if(typeof laserShots!=='undefined') laserShots=Math.min(5,Number(laserShots||0)+5); expansion.laserPacks--; }
-    if(type==='star'){ expansion.invincibleUntil=Math.max(expansion.invincibleUntil,Date.now()+10000); expansion.activeTimedType='star'; expansion.starPacks--; }
+    if(type==='flight'){ expansion.flightUntil=Date.now()+10000; expansion.activeTimedType='flight'; expansion.flightPacks--; expansion.flightAltitude=270; }
     if(type==='invisibility'){ expansion.invisibilityUntil=Date.now()+5000; expansion.activeTimedType='invisibility'; expansion.invisibilityPacks--; }
-    if((type==='shield'&&expansion.shield<=0)||(type==='laser'&&expansion.laserPacks<=0)||(type==='star'&&expansion.starPacks<=0)||(type==='invisibility'&&expansion.invisibilityPacks<=0)) expansion.activeItem=null;
+    if((type==='shield'&&expansion.shield<=0)||(type==='laser'&&expansion.laserPacks<=0)||(type==='flight'&&expansion.flightPacks<=0)||(type==='invisibility'&&expansion.invisibilityPacks<=0)) expansion.activeItem=null;
     saveShopState(); updateUseButton();
-    announce(t('تم استخدام العنصر!','Item used!'));
+    announce(type==='flight' ? t('✈️ الطيران مفعل لمدة 10 ثوانٍ!','✈️ Flight active for 10 seconds!') : t('تم استخدام العنصر!','Item used!'));
   }
 
   function addShop() {
@@ -6354,7 +6357,7 @@ setLanguage(selectedLanguage);
         <p id="shopCoins"></p>
         <button data-buy="shield"></button>
         <button data-buy="laser"></button>
-        <button data-buy="star"></button>
+        <button data-buy="flight"></button>
         <button data-buy="invisibility"></button>
         <button data-close></button>
       </div>`;
@@ -6367,7 +6370,7 @@ setLanguage(selectedLanguage);
         coins-=cost;
         if(type==='shield') expansion.shield++;
         if(type==='laser') expansion.laserPacks++;
-        if(type==='star') expansion.starPacks++;
+        if(type==='flight') expansion.flightPacks++;
         if(type==='invisibility') expansion.invisibilityPacks++;
         expansion.activeItem=type;
         updateHUD(); saveShopState(); updateShopText(); updateUseButton();
@@ -6384,7 +6387,7 @@ setLanguage(selectedLanguage);
     const labels={
       shield:t("🛡️ درع 10 ثوانٍ — 25 عملة","🛡️ Shield 10s — 25 coins"),
       laser:t("🔫 5 طلقات ليزر — 30 عملة","🔫 5 Laser shots — 30 coins"),
-      star:t("⭐ نجمة حماية 10 ثوانٍ — 35 عملة","⭐ Star protection 10s — 35 coins"),
+      flight:t("✈️ طيران 10 ثوانٍ — 35 عملة","✈️ Flight 10s — 35 coins"),
       invisibility:t("👻 اختفاء 5 ثوانٍ — 45 عملة","👻 Invisibility 5s — 45 coins")
     };
     box.querySelectorAll("[data-buy]").forEach(b=>b.textContent=labels[b.dataset.buy]);
@@ -6404,10 +6407,10 @@ setLanguage(selectedLanguage);
     const remaining = Math.max(0, 180 - elapsed);
     const min = Math.floor(remaining / 60);
     const sec = Math.floor(remaining % 60);
-    const stars = document.getElementById("expStars");
     const shield = document.getElementById("expShield");
-    if (stars) stars.textContent = `⭐ ${expansion.stageStars}`;
+    const flight = document.getElementById("expFlight");
     if (shield) shield.textContent = `🛡️ ${expansion.shield}`;
+    if (flight) flight.textContent = `✈️ ${expansion.flightPacks}`;
     updateUseButton();
     updatePowerTimer();
   }
@@ -6418,6 +6421,8 @@ setLanguage(selectedLanguage);
     expansion.stageStars = 0;
     expansion.invincibleUntil = 0;
     expansion.invisibilityUntil = 0;
+    expansion.flightUntil = 0;
+    expansion.flightAltitude = 270;
     expansion.activeTimedType = null;
     expansion.speedUntil = 0;
     expansion.jumpUntil = 0;
@@ -6425,7 +6430,7 @@ setLanguage(selectedLanguage);
 
     const width = Number(typeof levelWidth !== "undefined" ? levelWidth : 30000) || 30000;
     expansion.powerUp = {
-      type: getStage() % 4 === 0 ? "star" :
+      type: getStage() % 4 === 0 ? "flight" :
             getStage() % 3 === 0 ? "shield" :
             getStage() % 2 === 0 ? "speed" : "jump",
       x: Math.floor(width * 0.48),
@@ -6463,12 +6468,19 @@ setLanguage(selectedLanguage);
       ctx.font = "28px sans-serif";
       ctx.textAlign = "center";
       ctx.fillText(
-        p.type === "star" ? "⭐" :
+        p.type === "flight" ? "✈️" :
         p.type === "shield" ? "🛡️" :
         p.type === "speed" ? "⚡" : "🦘",
         x, y
       );
       ctx.restore();
+    }
+
+    if (Date.now() < Number(expansion.flightUntil || 0) && typeof player !== "undefined") {
+      const altitude = Number(expansion.flightAltitude || 270);
+      if (player.y > altitude) player.y = altitude;
+      player.vy = 0;
+      player.ground = false;
     }
 
     const s = expansion.secret;
@@ -6477,6 +6489,14 @@ setLanguage(selectedLanguage);
       ctx.save();
       ctx.font = "25px sans-serif";
       ctx.fillText("❓", x, 230);
+      ctx.restore();
+    }
+
+    if (Date.now() < Number(expansion.flightUntil || 0) && typeof player !== "undefined") {
+      ctx.save();
+      ctx.font = "42px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("✈️", (player.x - cameraX) + player.width/2, player.y + player.height + 18);
       ctx.restore();
     }
 
@@ -6510,13 +6530,13 @@ setLanguage(selectedLanguage);
       if (Math.abs((player.x + player.width/2) - p.x) < 42 &&
           Math.abs((player.y + player.height/2) - p.y) < 60) {
         p.collected = true;
-        if (p.type === "star") expansion.invincibleUntil = Date.now() + 12000;
+        if (p.type === "flight") { expansion.flightUntil = Date.now() + 10000; expansion.activeTimedType = "flight"; expansion.flightAltitude = 270; }
         if (p.type === "shield") expansion.shield++;
         if (p.type === "speed") expansion.speedUntil = Date.now() + 15000;
         if (p.type === "jump") expansion.jumpUntil = Date.now() + 15000;
         expansion.stageStars = Math.max(expansion.stageStars, 1);
         announce(
-          p.type === "star" ? t("⭐ أصبحت محصنًا!", "⭐ You are invincible!") :
+          p.type === "flight" ? t("✈️ حصلت على الطيران!", "✈️ Flight acquired!") :
           p.type === "shield" ? t("🛡️ حصلت على درع!", "🛡️ Shield acquired!") :
           p.type === "speed" ? t("⚡ سرعة إضافية!", "⚡ Speed boost!") :
           t("🦘 قفزة عالية!", "🦘 High jump!")
