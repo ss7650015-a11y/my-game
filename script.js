@@ -5439,9 +5439,13 @@ function initStartScreen() {
   `;
   document.body.appendChild(settingsPanel);
 
-  card.querySelector('.play-btn').addEventListener('click', () => {
-    initAudio();
-    soundButton();
+  const startPlay = (event) => {
+    if (!startMenu || !document.body.contains(startMenu)) return;
+    if (event) { event.preventDefault(); event.stopPropagation(); }
+
+    // Audio is optional: never let an audio/browser restriction prevent Play.
+    try { initAudio(); } catch (_) {}
+    try { soundButton(); } catch (_) {}
 
     // Always start a fresh game from stage 1.
     currentLevel = 1;
@@ -5462,8 +5466,21 @@ function initStartScreen() {
     startMenu = null;
     settingsPanel = null;
 
-    startGame();
-  });
+    // Start only after the menu is removed; this also works on touch browsers.
+    try { startGame(); } catch (err) {
+      console.error('Start Play failed:', err);
+      gameOver = false; gameWon = false; changingLevel = false; gameRunning = false;
+      try { loadLevel(1, true); } catch (_) {}
+      try { startGame(); } catch (_) {}
+    }
+  };
+
+  const playButton = card.querySelector('.play-btn');
+  playButton.addEventListener('click', startPlay, {passive:false});
+  playButton.addEventListener('pointerup', (e) => {
+    // Some mobile browsers suppress click after a pointer interaction on overlays.
+    if (e.pointerType === 'touch') startPlay(e);
+  }, {passive:false});
 
   card.querySelector('.load-btn').addEventListener('click', () => {
     initAudio();
@@ -7083,13 +7100,25 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
         transform:translateY(3px) scale(.96);
         background:rgba(39,174,96,.82);
       }
+      /* Canonical mobile action layout: Use + Run + Store in one row at bottom-right; Jump above Use. */
       #nbTouchLeft{left:max(12px,env(safe-area-inset-left));bottom:max(16px,calc(16px + env(safe-area-inset-bottom)));}
       #nbTouchRight{left:84px;bottom:max(16px,calc(16px + env(safe-area-inset-bottom)));}
-      #nbTouchRun{left:156px;bottom:max(16px,calc(16px + env(safe-area-inset-bottom)));}
-      #nbTouchJump{right:max(12px,env(safe-area-inset-right));bottom:max(88px,calc(88px + env(safe-area-inset-bottom)));}
-      #nbTouchUse{right:84px;bottom:max(88px,calc(88px + env(safe-area-inset-bottom)));}
+      #nbTouchRun{right:max(84px,calc(84px + env(safe-area-inset-right)));bottom:max(16px,calc(16px + env(safe-area-inset-bottom)));}
+      #nbTouchUse{right:max(156px,calc(156px + env(safe-area-inset-right)));bottom:max(16px,calc(16px + env(safe-area-inset-bottom)));}
       #nbTouchStore{right:max(12px,env(safe-area-inset-right));bottom:max(16px,calc(16px + env(safe-area-inset-bottom)));}
-      @media(max-width:430px){.nb-touch-btn{width:56px;height:56px;font-size:24px}#nbTouchRight{left:76px}#nbTouchRun{left:140px}#nbTouchUse{right:76px}#nbTouchJump{right:12px}}
+      #nbTouchJump{right:max(156px,calc(156px + env(safe-area-inset-right)));bottom:max(88px,calc(88px + env(safe-area-inset-bottom)));}
+      @media(max-width:430px){.nb-touch-btn{width:56px;height:56px;font-size:24px}#nbTouchRight{left:76px}#nbTouchRun{right:max(68px,calc(68px + env(safe-area-inset-right)))}#nbTouchUse{right:max(132px,calc(132px + env(safe-area-inset-right)))}#nbTouchStore{right:max(4px,env(safe-area-inset-right))}#nbTouchJump{right:max(132px,calc(132px + env(safe-area-inset-right)));bottom:max(76px,calc(76px + env(safe-area-inset-bottom)))}}
+      /* Landscape phones: keep every movement control inside the visible viewport.
+         Do not depend on max-width because many phones become 700-1000px wide in landscape. */
+      @media (orientation: landscape) and (max-height: 700px){
+        .nb-touch-btn{width:58px;height:58px;font-size:24px;}
+        #nbTouchLeft{left:max(10px,env(safe-area-inset-left));bottom:max(10px,calc(10px + env(safe-area-inset-bottom)));}
+        #nbTouchRight{left:78px;bottom:max(10px,calc(10px + env(safe-area-inset-bottom)));display:block !important;visibility:visible !important;}
+        #nbTouchRun{right:max(78px,calc(78px + env(safe-area-inset-right)));bottom:max(10px,calc(10px + env(safe-area-inset-bottom)));}
+        #nbTouchUse{right:max(146px,calc(146px + env(safe-area-inset-right)));bottom:max(10px,calc(10px + env(safe-area-inset-bottom)));}
+        #nbTouchStore{right:max(10px,env(safe-area-inset-right));bottom:max(10px,calc(10px + env(safe-area-inset-bottom)));}
+        #nbTouchJump{right:max(146px,calc(146px + env(safe-area-inset-right)));bottom:max(78px,calc(78px + env(safe-area-inset-bottom)));}
+      }
       #nbTouchFire{display:none !important;}
       @media (min-width: 900px) and (pointer: coarse){
         .nb-touch-btn{width:70px;height:70px;}
