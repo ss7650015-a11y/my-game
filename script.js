@@ -5452,6 +5452,7 @@ function initStartScreen() {
     gameWon = false;
     changingLevel = false;
     gameRunning = false;
+    state.timeAttack = false;
 
     loadLevel(1, true);
     updateHUD();
@@ -7082,12 +7083,13 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
         transform:translateY(3px) scale(.96);
         background:rgba(39,174,96,.82);
       }
-      #nbTouchLeft{left:max(14px,env(safe-area-inset-left));bottom:max(18px,calc(18px + env(safe-area-inset-bottom)));}
-      #nbTouchRight{left:88px;bottom:max(18px,calc(18px + env(safe-area-inset-bottom)));}
-      #nbTouchRun{right:236px;bottom:max(18px,calc(18px + env(safe-area-inset-bottom)));}
-      #nbTouchStore{right:162px;bottom:max(18px,calc(18px + env(safe-area-inset-bottom)));}
-      #nbTouchUse{right:14px;bottom:max(92px,calc(92px + env(safe-area-inset-bottom)));}
-      #nbTouchJump{right:88px;bottom:max(92px,calc(92px + env(safe-area-inset-bottom)));}
+      #nbTouchLeft{left:max(12px,env(safe-area-inset-left));bottom:max(16px,calc(16px + env(safe-area-inset-bottom)));}
+      #nbTouchRight{left:84px;bottom:max(16px,calc(16px + env(safe-area-inset-bottom)));}
+      #nbTouchRun{left:156px;bottom:max(16px,calc(16px + env(safe-area-inset-bottom)));}
+      #nbTouchJump{right:max(12px,env(safe-area-inset-right));bottom:max(88px,calc(88px + env(safe-area-inset-bottom)));}
+      #nbTouchUse{right:84px;bottom:max(88px,calc(88px + env(safe-area-inset-bottom)));}
+      #nbTouchStore{right:max(12px,env(safe-area-inset-right));bottom:max(16px,calc(16px + env(safe-area-inset-bottom)));}
+      @media(max-width:430px){.nb-touch-btn{width:56px;height:56px;font-size:24px}#nbTouchRight{left:76px}#nbTouchRun{left:140px}#nbTouchUse{right:76px}#nbTouchJump{right:12px}}
       #nbTouchFire{display:none !important;}
       @media (min-width: 900px) and (pointer: coarse){
         .nb-touch-btn{width:70px;height:70px;}
@@ -7180,7 +7182,9 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
     controls.id = 'nbMobileTouchControls';
 
     const left = makeButton('nbTouchLeft','◀','left');
+    left.title = selectedLanguage==='en' ? 'Move left' : 'الرجوع للخلف';
     const right = makeButton('nbTouchRight','▶','right');
+    right.title = selectedLanguage==='en' ? 'Move forward' : 'التقدم للأمام';
     const run = makeButton('nbTouchRun','🏃','run');
     const jump = makeButton('nbTouchJump','⬆','jump');
     const use = makeButton('nbTouchUse','🎒','use');
@@ -7219,7 +7223,7 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
     if (fire) fire.style.display = 'none';
     const use = document.getElementById('nbTouchUse');
     if (use) {
-      const icons = {shield:'🛡️',laser:'🔫',flight:'✈️',invisibility:'👻'};
+      const icons = {shield:'🛡️',laser:'🔫',flight:'✈️',invisibility:'👻',fire:'🔥',speed:'⚡',double:'🪽',magnet:'🧲',ghost:'🌫️'};
       const type = typeof window.__nbShopGetActive === 'function' ? window.__nbShopGetActive() : null;
       use.textContent = type ? icons[type] : '🎒';
       use.title = type ? 'استخدام العنصر' : 'لا يوجد عنصر';
@@ -7292,7 +7296,7 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
       if(d && typeof d==='object'){
         if(d.upgrades) state.upgrades={...state.upgrades,...d.upgrades};
         state.achievements=d.achievements||{};
-        state.timeAttackBest=d.timeAttackBest||{}; state.challengeEnabled=!!d.challengeEnabled; state.challengeChoice=d.challengeChoice||null; if(d.shop) state.shop={...state.shop,...d.shop}; state.shopActive=d.shopActive||null;
+        state.timeAttackBest=d.timeAttackBest||{}; state.challengeEnabled=false; state.challengeChoice=d.challengeChoice||null; if(d.shop) state.shop={...state.shop,...d.shop}; state.shopActive=d.shopActive||null;
       }
     }catch(_){ }
   }
@@ -7318,17 +7322,25 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
     if(document.getElementById('adventureFeatureStyle')) return;
     const st=document.createElement('style'); st.id='adventureFeatureStyle';
     st.textContent=`
-      #adventureHUD{position:fixed;left:12px;bottom:14px;z-index:10020;display:none;gap:6px;flex-wrap:wrap;max-width:min(92vw,900px);font:800 12px system-ui,sans-serif;pointer-events:none}
-      #adventureHUD span{background:rgba(10,18,28,.82);color:#fff;padding:7px 9px;border-radius:11px;box-shadow:0 3px 12px rgba(0,0,0,.22)}
+      #adventureHUD{position:fixed;left:12px!important;right:12px!important;top:12px!important;bottom:auto!important;z-index:10020;display:none;gap:7px;flex-wrap:wrap;max-width:none;align-items:center;justify-content:flex-start;font:800 12px system-ui,sans-serif;pointer-events:none}
+      #adventureHUD span{background:rgba(10,18,28,.88);color:#fff;padding:8px 10px;border-radius:11px;box-shadow:0 3px 12px rgba(0,0,0,.22);white-space:nowrap}
+      #hud{top:68px!important;bottom:auto!important;z-index:10019!important;max-width:calc(100vw - 24px);}
+      #adventureShop .shop-head{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
+      #adventureShop .shop-selected-info{min-width:150px;padding:10px;border-radius:13px;background:rgba(39,174,96,.16);border:1px solid rgba(39,174,96,.45);text-align:center}
+      #adventureShop .shop-selected-info small{display:block;margin-top:4px;opacity:.8}
+      #adventureShop .shop-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+      #adventureShop .shop-actions .menu-action{margin:0!important}
+      #adventureShopItems .shop-item{transition:transform .12s,outline .12s,background .12s}
+      #adventureShopItems .shop-item:hover{transform:translateY(-2px)}
       #adventureBanner{position:fixed;left:50%;top:14%;transform:translateX(-50%);z-index:10030;display:none;max-width:90vw;padding:12px 18px;border-radius:15px;background:rgba(9,16,26,.92);color:#fff;font:900 18px system-ui,sans-serif;text-align:center;box-shadow:0 10px 35px rgba(0,0,0,.35);pointer-events:none}
       #adventureChallenge{position:fixed;right:12px;top:112px;z-index:10015;display:none;min-width:190px;max-width:270px;padding:10px;border-radius:14px;background:rgba(9,16,26,.78);color:#fff;font:700 12px system-ui,sans-serif;pointer-events:none}
       #adventureChallenge b{display:block;font-size:14px;margin-bottom:4px}
       #adventurePowerPanel{position:fixed;right:12px;bottom:14px;z-index:10020;display:none;padding:8px 10px;border-radius:12px;background:rgba(9,16,26,.84);color:#fff;font:800 12px system-ui,sans-serif;pointer-events:none}
-      @media(max-width:700px){#adventureHUD{left:8px;right:8px;bottom:88px;max-width:calc(100vw - 16px)}#adventureChallenge{top:145px;right:8px;min-width:160px;max-width:45vw;font-size:10px}#adventureBanner{top:19%;font-size:15px}}
+      @media(max-width:700px){#adventureHUD{left:8px!important;right:8px!important;top:8px!important;bottom:auto!important;gap:5px}#adventureHUD span{padding:6px 7px;font-size:10px}#hud{top:64px!important;left:8px!important;right:8px!important}#adventureChallenge{top:116px!important;right:8px!important;min-width:165px;max-width:48vw;font-size:10px}#adventurePowerPanel{right:8px;bottom:88px}#adventureBanner{top:19%;font-size:15px}#adventureShop .shop-head{display:block}#adventureShop .shop-selected-info{margin-top:9px}}
       .adventure-menu-btn{display:block;width:100%;margin-top:12px;padding:12px 16px;border:0;border-radius:14px;background:#27ae60;color:#fff;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 6px 0 #176b3a}
       #adventureChallengeMenu{position:fixed;inset:0;z-index:10070;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.66);padding:16px;font-family:system-ui,sans-serif}
       #adventureChallengeMenu .challenge-box{width:min(94vw,520px);max-height:90vh;overflow:auto;background:#14202b;color:#fff;border-radius:22px;padding:20px;text-align:center;box-shadow:0 22px 70px rgba(0,0,0,.5)}
-      #adventureChallengeMenu button.challenge-option{display:block;width:100%;margin:8px 0;padding:13px;border:0;border-radius:13px;background:#27ae60;color:#fff;font-weight:900;cursor:pointer}
+      #adventureChallengeMenu button.challenge-option{display:block;width:100%;margin:8px 0;padding:13px 14px;border:0;border-radius:13px;background:#27ae60;color:#fff;font-weight:900;cursor:pointer;text-align:right;box-shadow:0 4px 0 #176b3a}#adventureChallengeMenu .challenge-name{display:block;font-size:16px}#adventureChallengeMenu .challenge-option small{display:block;margin-top:5px;opacity:.85;line-height:1.45;font-weight:600}
     `;
     document.head.appendChild(st);
   }
@@ -7357,7 +7369,7 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
     const selected=state.challengeChoice || (currentLevel%4===0?'coins':currentLevel%4===1?'kills':currentLevel%4===2?'time':'safe');
     if(selected==='coins') return {kind:'coins',target:targetCoins,done:0,label:tr('جمع العملات','Collect coins')};
     if(selected==='kills') return {kind:'kills',target:targetKills,done:0,label:tr('اهزم الأعداء','Defeat enemies')};
-    if(selected==='time') return {kind:'time',target:Math.max(65,185-currentLevel*2),done:0,label:tr('الإنهاء بسرعة','Finish quickly')};
+    if(selected==='time') return {kind:'time',target:Math.max(65,185-currentLevel*2),done:0,label:tr('تحدي السرعة','Speed Challenge')};
     return {kind:'safe',target:0,done:0,label:tr('بدون ضرر','No damage')};
   }
 
@@ -7575,7 +7587,7 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
     const q=!!keys['q']; if(q&&!state.qWasDown)activatePower(); state.qWasDown=q;
     const g=!!keys['g']; if(g&&!state.gWasDown)fireball(); state.gWasDown=g;
     const jump=!!(keys['arrowup']||keys['w']||keys[' ']);
-    if(jump&&!state.jumpWasDown&&state.activePower==='double'&&!player.ground&&!state.doubleUsed){player.vy=-15.5;state.doubleUsed=true;}
+    if(jump&&!state.jumpWasDown&&state.doubleReady&&!player.ground&&!state.doubleUsed){player.vy=-15.5;state.doubleUsed=true;state.doubleReady=false;}
     if(player.ground)state.doubleUsed=false;
     state.jumpWasDown=jump;
   }
@@ -7591,7 +7603,7 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
     const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
     set('advCombo',`🔥 ×${combo}`);set('advGems',`💎 ${state.gems.filter(x=>x.collected).length}`);set('advTime',`⏱️ ${formatTime(elapsed)}`);set('advPower',state.activePower?`🎒 ${powerLabel(state.activePower)} ${Math.max(0,Math.ceil((state.powerUntil-now())/1000))}s`:(state.shopActive&&shopCount(state.shopActive)>0?`🎒 ${shopLabel(state.shopActive)}`:'🎒 —'));
     set('advWeather',state.weather==='rain'?'🌧️':state.weather==='storm'?'⛈️':state.weather==='fog'?'🌫️':'☀️');
-    if(state.challenge){const c=state.challenge;set('advChallengeTitle',`🎯 ${c.label}`);set('advChallengeText',c.kind==='time'?`${formatTime(c.done)} / ${formatTime(c.target)}`:c.kind==='safe'?`${c.done===0?tr('بدون إصابة','No damage'):tr('تعرضت لضرر','Took damage')}`:`${Math.min(c.done,c.target)} / ${c.target}`);}
+    if(state.challenge){const c=state.challenge;set('advChallengeTitle',`🎯 ${c.label}`);set('advChallengeText',c.kind==='time'?`${tr('الوقت','Time')}: ${formatTime(c.done)} / ${formatTime(c.target)} • 🏆 ${tr('مكافأة 15','Reward 15')}`:c.kind==='safe'?`${c.done===0?tr('بدون إصابة ❤️','No damage ❤️'):tr('تم تلقي ضرر ❌','Damage taken ❌')} • 🏆 ${tr('مكافأة 15','Reward 15')}`:`${tr('التقدم','Progress')}: ${Math.min(c.done,c.target)} / ${c.target} • 🏆 ${tr('مكافأة 15','Reward 15')}`);}
     set('advPowerUse',state.activePower?'Q':'—');
     const banner=document.getElementById('adventureBanner');if(banner)banner.style.display=state.bannerUntil>now()? 'block':'none';
   }
@@ -7657,7 +7669,7 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
     else if(type==='invisibility') { state.shop[type]--; state.shopTimedUntil=now()+5000; state.activePower='invisibility'; state.powerUntil=now()+5000; }
     else if(type==='fire') { state.shop[type]--; state.fireReady=true; fireball(); }
     else if(type==='speed') { state.shop[type]--; state.activePower='speed'; state.powerUntil=now()+15000; }
-    else if(type==='double') { state.shop[type]--; state.activePower='double'; state.powerUntil=now()+20000; state.doubleReady=true; }
+    else if(type==='double') { state.shop[type]--; state.activePower=null; state.powerUntil=0; state.doubleReady=true; }
     else if(type==='magnet') { state.shop[type]--; state.activePower='magnet'; state.powerUntil=now()+20000; }
     else if(type==='ghost') { state.shop[type]--; state.activePower='ghost'; state.powerUntil=now()+8000; state.ghostUntil=now()+8000; }
     if(shopCount(type)<=0) state.shopActive=null;
@@ -7685,13 +7697,18 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
         announce(tr(`تم شراء ${shopLabel(type)} — اضغط زر الاستخدام`,`Purchased ${shopLabel(type)} — press Use`),1500);
       };
     });
+    const selectedInfo=box.querySelector('#adventureShopSelected');
+    const useBtn=box.querySelector('[data-shop-use]');
+    const activeType=state.shopActive&&shopCount(state.shopActive)>0?state.shopActive:null;
+    if(selectedInfo) selectedInfo.innerHTML=activeType ? `<b>${shopLabel(activeType)}</b><small>${tr(`المخزون: ${shopCount(activeType)}` ,`Stock: ${shopCount(activeType)}`)}</small>` : `<b>${tr('لا يوجد عنصر محدد','No item selected')}</b><small>${tr('اشترِ عنصرًا ثم حدده للاستخدام','Buy an item and select it to use')}</small>`;
+    if(useBtn){useBtn.textContent=`🎒 ${tr('استخدام','Use')}`;useBtn.disabled=!activeType;useBtn.style.opacity=activeType?'1':'.45';useBtn.onclick=()=>{if(useShopItem()){updateShopUI();}};}
     const close=box.querySelector('[data-shop-close]'); if(close)close.textContent=tr('إغلاق','Close');
   }
   function openShop(){
     let box=document.getElementById('adventureShop');
     if(!box){
       box=document.createElement('div'); box.id='adventureShop';
-      box.innerHTML=`<div class="adventure-modal-box"><h2>${tr('🛒 المتجر','🛒 Shop')}</h2><div id="adventureShopCoins"></div><div id="adventureShopItems"></div><button type="button" data-shop-close class="menu-action menu-green">${tr('إغلاق','Close')}</button></div>`;
+      box.innerHTML=`<div class="adventure-modal-box"><div class="shop-head"><div><h2>${tr('🛒 المتجر','🛒 Shop')}</h2><div id="adventureShopCoins"></div></div><div id="adventureShopSelected" class="shop-selected-info">${tr('اختر عنصرًا','Select an item')}</div></div><div id="adventureShopItems"></div><div class="shop-actions"><button type="button" data-shop-use class="menu-action menu-green">🎒 ${tr('استخدام','Use')}</button><button type="button" data-shop-close class="menu-action menu-green">${tr('إغلاق','Close')}</button></div></div>`;
       document.body.appendChild(box);
       box.querySelector('[data-shop-close]').onclick=()=>box.style.display='none';
     }
@@ -7756,9 +7773,16 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
     const title=el.querySelector('#challengeMenuTitle'),hint=el.querySelector('#challengeMenuHint'),opts=el.querySelector('#challengeOptions'),dis=el.querySelector('#challengeDisable');
     title.textContent=tr('🎯 قسم التحديات','🎯 Challenges');
     hint.textContent=tr('اختر تحديًا واحدًا. سيظهر التحدي المختار فقط أثناء اللعب.','Choose one challenge. Only the selected challenge appears during gameplay.');
-    const defs=[['coins','🪙 جمع العملات'],['kills','⚔️ هزيمة الأعداء'],['time','⏱️ الإنهاء بسرعة'],['safe','🛡️ بدون ضرر']];
-    opts.innerHTML=defs.map(([k,label])=>`<button type="button" class="challenge-option" data-challenge="${k}">${tr(label,label.replace('جمع العملات','Collect coins').replace('هزيمة الأعداء','Defeat enemies').replace('الإنهاء بسرعة','Finish quickly').replace('بدون ضرر','No damage'))}${state.challengeChoice===k?' ✓':''}</button>`).join('');
-    opts.querySelectorAll('[data-challenge]').forEach(b=>b.onclick=()=>{state.challengeEnabled=true;state.challengeChoice=b.dataset.challenge;saveProfile();el.style.display='none';announce(tr('تم اختيار التحدي. سيظهر عند بدء اللعب.','Challenge selected. It will appear when you play.'),1400);});
+    const defs=[['coins','🪙 جمع العملات'],['kills','⚔️ هزيمة الأعداء'],['time','⏱️ تحدي السرعة'],['safe','🛡️ بدون ضرر']];
+    const d=diff();
+    const descriptions={
+      coins:tr('اجمع أكبر عدد من العملات الخاصة قبل نهاية المرحلة.','Collect the required special coins before the stage ends.'),
+      kills:tr(`اهزم ${Math.max(3,Math.floor(4+d*9))} أعداء على الأقل.` ,`Defeat at least ${Math.max(3,Math.floor(4+d*9))} enemies.`),
+      time:tr(`أنهِ المرحلة قبل ${formatTime(Math.max(65,185-currentLevel*2))}.`,`Finish the stage before ${formatTime(Math.max(65,185-currentLevel*2))}.`),
+      safe:tr('أنهِ المرحلة دون خسارة حياة أو تلقي ضرر.','Finish the stage without taking damage.')
+    };
+    opts.innerHTML=defs.map(([k,label])=>`<button type="button" class="challenge-option" data-challenge="${k}"><span class="challenge-name">${tr(label,label.replace('جمع العملات','Collect coins').replace('هزيمة الأعداء','Defeat enemies').replace('تحدي السرعة','Speed Challenge').replace('الإنهاء بسرعة','Speed Challenge').replace('بدون ضرر','No damage'))}${state.challengeChoice===k?' ✓':''}</span><small>${descriptions[k]}</small></button>`).join('');
+    opts.querySelectorAll('[data-challenge]').forEach(b=>b.onclick=()=>{state.challengeEnabled=true;state.challengeChoice=b.dataset.challenge;state.timeAttack=(b.dataset.challenge==='time');saveProfile();el.style.display='none';announce(tr('تم اختيار التحدي. سيظهر التحدي المختار فقط أثناء اللعب.','Challenge selected. Only the selected challenge will appear during gameplay.'),1400);});
     dis.textContent=state.challengeEnabled?tr('إيقاف التحديات','Disable challenges'):tr('إغلاق','Close');
     dis.onclick=()=>{if(state.challengeEnabled){state.challengeEnabled=false;state.challengeChoice=null;state.challenge=null;saveProfile();announce(tr('تم إيقاف التحديات','Challenges disabled'),1200);}el.style.display='none';};
     el.style.display='flex';
@@ -7769,7 +7793,7 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
     menu.dataset.adventureButtons='1';const card=menu.firstElementChild;if(!card)return;
     const up=document.createElement('button');up.className='adventure-menu-btn adventure-upgrade-btn menu-action menu-green';up.textContent=tr('👑 تطوير الشخصية','👑 Character Upgrades');up.onclick=upgradeMenu;card.insertBefore(up,card.querySelector('.exit-btn'));
     const ch=document.createElement('button');ch.className='adventure-menu-btn adventure-challenge-btn menu-action menu-green';ch.textContent=tr('🎯 التحديات','🎯 Challenges');ch.onclick=openChallengeMenu;card.insertBefore(ch,card.querySelector('.exit-btn'));
-    const ta=document.createElement('button');ta.className='adventure-menu-btn adventure-time-btn menu-action menu-green';ta.textContent=tr('⏱️ تحدي السرعة','⏱️ Time Attack');ta.onclick=()=>{state.timeAttack=true;currentLevel=1;score=0;coins=0;lives=3;gameOver=false;gameWon=false;changingLevel=false;loadLevel(1,true);menu.remove();if(settingsPanel)settingsPanel.remove();startGame();announce(tr('⏱️ تحدي السرعة بدأ!','⏱️ Time Attack started!'),1800);};card.insertBefore(ta,card.querySelector('.exit-btn'));
+
   }
 
   // Wrap stable core functions once. No duplicate game loop is introduced.
