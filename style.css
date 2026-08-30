@@ -794,4 +794,43 @@ button#soundToggle {
   #adventureHUD span{font-size:9px!important;padding:5px 6px!important;}
   #adventureShopItems{grid-template-columns:1fr!important;}
 }
-\n\n/* FINAL TOUCH ACTION LAYOUT — one canonical rule set for portrait + landscape */\n@media (pointer: coarse) {\n  #nbMobileTouchControls #nbTouchLeft,\n  #nbMobileTouchControls #nbTouchRight { display:block !important; visibility:visible !important; }\n  #nbMobileTouchControls #nbTouchRun,\n  #nbMobileTouchControls #nbTouchUse,\n  #nbMobileTouchControls #nbTouchStore { display:block; visibility:visible; }\n  #nbMobileTouchControls #nbTouchRun { right:84px; left:auto; bottom:max(16px,calc(16px + env(safe-area-inset-bottom))); }\n  #nbMobileTouchControls #nbTouchUse { right:156px; left:auto; bottom:max(16px,calc(16px + env(safe-area-inset-bottom))); }\n  #nbMobileTouchControls #nbTouchStore { right:max(12px,env(safe-area-inset-right)); left:auto; bottom:max(16px,calc(16px + env(safe-area-inset-bottom))); }\n  #nbMobileTouchControls #nbTouchJump { right:156px; left:auto; bottom:max(88px,calc(88px + env(safe-area-inset-bottom))); }\n}\n@media (pointer: coarse) and (max-width:430px) {\n  #nbMobileTouchControls #nbTouchRun { right:68px; }\n  #nbMobileTouchControls #nbTouchUse { right:132px; }\n  #nbMobileTouchControls #nbTouchStore { right:max(4px,env(safe-area-inset-right)); }\n  #nbMobileTouchControls #nbTouchJump { right:132px; bottom:max(76px,calc(76px + env(safe-area-inset-bottom))); }\n}\n@media (pointer: coarse) and (orientation: landscape) and (max-height:700px) {\n  #nbMobileTouchControls #nbTouchRun { right:78px; bottom:max(10px,calc(10px + env(safe-area-inset-bottom))); }\n  #nbMobileTouchControls #nbTouchUse { right:146px; bottom:max(10px,calc(10px + env(safe-area-inset-bottom))); }\n  #nbMobileTouchControls #nbTouchStore { right:max(10px,env(safe-area-inset-right)); bottom:max(10px,calc(10px + env(safe-area-inset-bottom))); }\n  #nbMobileTouchControls #nbTouchJump { right:146px; bottom:max(78px,calc(78px + env(safe-area-inset-bottom))); }\n}\n
+\n\n/* FINAL TOUCH ACTION LAYOUT — one canonical rule set for portrait + landscape */
+@media (pointer: coarse) {
+  #nbMobileTouchControls #nbTouchLeft,
+  #nbMobileTouchControls #nbTouchRight,
+  #nbMobileTouchControls #nbTouchRun,
+  #nbMobileTouchControls #nbTouchUse,
+  #nbMobileTouchControls #nbTouchStore,
+  #nbMobileTouchControls #nbTouchJump { display:block !important; visibility:visible !important; }
+
+  /* Movement: left/right on the lower-left. Actions: Use + Run + Store on the lower-right. */
+  #nbMobileTouchControls #nbTouchLeft { left:max(10px,env(safe-area-inset-left)); right:auto; bottom:max(16px,calc(16px + env(safe-area-inset-bottom))); }
+  #nbMobileTouchControls #nbTouchRight { left:84px; right:auto; bottom:max(16px,calc(16px + env(safe-area-inset-bottom))); }
+  #nbMobileTouchControls #nbTouchStore { right:max(12px,env(safe-area-inset-right)); left:auto; bottom:max(16px,calc(16px + env(safe-area-inset-bottom))); }
+  #nbMobileTouchControls #nbTouchRun { right:max(84px,calc(84px + env(safe-area-inset-right))); left:auto; bottom:max(16px,calc(16px + env(safe-area-inset-bottom))); }
+  #nbMobileTouchControls #nbTouchUse { right:max(156px,calc(156px + env(safe-area-inset-right))); left:auto; bottom:max(16px,calc(16px + env(safe-area-inset-bottom))); }
+  /* Jump is directly above Use. */
+  #nbMobileTouchControls #nbTouchJump { right:max(156px,calc(156px + env(safe-area-inset-right))); left:auto; bottom:max(88px,calc(88px + env(safe-area-inset-bottom))); }
+}
+
+@media (pointer: coarse) and (max-width:430px) {
+  #nbMobileTouchControls .nb-touch-btn { width:56px; height:56px; font-size:24px; }
+  #nbMobileTouchControls #nbTouchRight { left:76px; }
+  #nbMobileTouchControls #nbTouchStore { right:max(4px,env(safe-area-inset-right)); }
+  #nbMobileTouchControls #nbTouchRun { right:max(68px,calc(68px + env(safe-area-inset-right))); }
+  #nbMobileTouchControls #nbTouchUse,
+  #nbMobileTouchControls #nbTouchJump { right:max(132px,calc(132px + env(safe-area-inset-right))); }
+  #nbMobileTouchControls #nbTouchJump { bottom:max(76px,calc(76px + env(safe-area-inset-bottom))); }
+}
+
+@media (pointer: coarse) and (orientation: landscape) and (max-height:700px) {
+  #nbMobileTouchControls .nb-touch-btn { width:58px; height:58px; font-size:24px; }
+  #nbMobileTouchControls #nbTouchLeft { left:max(10px,env(safe-area-inset-left)); bottom:max(10px,calc(10px + env(safe-area-inset-bottom))); }
+  #nbMobileTouchControls #nbTouchRight { left:78px; bottom:max(10px,calc(10px + env(safe-area-inset-bottom))); }
+  #nbMobileTouchControls #nbTouchStore { right:max(10px,env(safe-area-inset-right)); bottom:max(10px,calc(10px + env(safe-area-inset-bottom))); }
+  #nbMobileTouchControls #nbTouchRun { right:max(78px,calc(78px + env(safe-area-inset-right))); bottom:max(10px,calc(10px + env(safe-area-inset-bottom))); }
+  #nbMobileTouchControls #nbTouchUse,
+  #nbMobileTouchControls #nbTouchJump { right:max(146px,calc(146px + env(safe-area-inset-right))); }
+  #nbMobileTouchControls #nbTouchUse { bottom:max(10px,calc(10px + env(safe-area-inset-bottom))); }
+  #nbMobileTouchControls #nbTouchJump { bottom:max(78px,calc(78px + env(safe-area-inset-bottom))); }
+}

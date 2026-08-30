@@ -5439,8 +5439,11 @@ function initStartScreen() {
   `;
   document.body.appendChild(settingsPanel);
 
+  let playStarting = false;
   const startPlay = (event) => {
+    if (playStarting) return;
     if (!startMenu || !document.body.contains(startMenu)) return;
+    playStarting = true;
     if (event) { event.preventDefault(); event.stopPropagation(); }
 
     // Audio is optional: never let an audio/browser restriction prevent Play.
@@ -5467,8 +5470,13 @@ function initStartScreen() {
     settingsPanel = null;
 
     // Start only after the menu is removed; this also works on touch browsers.
-    try { startGame(); } catch (err) {
+    try {
+      startGame();
+      // startGame() is the single owner of the game loop. If a browser event
+      // arrives twice, the playStarting guard above prevents a second start.
+    } catch (err) {
       console.error('Start Play failed:', err);
+      playStarting = false;
       gameOver = false; gameWon = false; changingLevel = false; gameRunning = false;
       try { loadLevel(1, true); } catch (_) {}
       try { startGame(); } catch (_) {}
@@ -5477,10 +5485,6 @@ function initStartScreen() {
 
   const playButton = card.querySelector('.play-btn');
   playButton.addEventListener('click', startPlay, {passive:false});
-  playButton.addEventListener('pointerup', (e) => {
-    // Some mobile browsers suppress click after a pointer interaction on overlays.
-    if (e.pointerType === 'touch') startPlay(e);
-  }, {passive:false});
 
   card.querySelector('.load-btn').addEventListener('click', () => {
     initAudio();
@@ -7100,25 +7104,7 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
         transform:translateY(3px) scale(.96);
         background:rgba(39,174,96,.82);
       }
-      /* Canonical mobile action layout: Use + Run + Store in one row at bottom-right; Jump above Use. */
-      #nbTouchLeft{left:max(12px,env(safe-area-inset-left));bottom:max(16px,calc(16px + env(safe-area-inset-bottom)));}
-      #nbTouchRight{left:84px;bottom:max(16px,calc(16px + env(safe-area-inset-bottom)));}
-      #nbTouchRun{right:max(84px,calc(84px + env(safe-area-inset-right)));bottom:max(16px,calc(16px + env(safe-area-inset-bottom)));}
-      #nbTouchUse{right:max(156px,calc(156px + env(safe-area-inset-right)));bottom:max(16px,calc(16px + env(safe-area-inset-bottom)));}
-      #nbTouchStore{right:max(12px,env(safe-area-inset-right));bottom:max(16px,calc(16px + env(safe-area-inset-bottom)));}
-      #nbTouchJump{right:max(156px,calc(156px + env(safe-area-inset-right)));bottom:max(88px,calc(88px + env(safe-area-inset-bottom)));}
-      @media(max-width:430px){.nb-touch-btn{width:56px;height:56px;font-size:24px}#nbTouchRight{left:76px}#nbTouchRun{right:max(68px,calc(68px + env(safe-area-inset-right)))}#nbTouchUse{right:max(132px,calc(132px + env(safe-area-inset-right)))}#nbTouchStore{right:max(4px,env(safe-area-inset-right))}#nbTouchJump{right:max(132px,calc(132px + env(safe-area-inset-right)));bottom:max(76px,calc(76px + env(safe-area-inset-bottom)))}}
-      /* Landscape phones: keep every movement control inside the visible viewport.
-         Do not depend on max-width because many phones become 700-1000px wide in landscape. */
-      @media (orientation: landscape) and (max-height: 700px){
-        .nb-touch-btn{width:58px;height:58px;font-size:24px;}
-        #nbTouchLeft{left:max(10px,env(safe-area-inset-left));bottom:max(10px,calc(10px + env(safe-area-inset-bottom)));}
-        #nbTouchRight{left:78px;bottom:max(10px,calc(10px + env(safe-area-inset-bottom)));display:block !important;visibility:visible !important;}
-        #nbTouchRun{right:max(78px,calc(78px + env(safe-area-inset-right)));bottom:max(10px,calc(10px + env(safe-area-inset-bottom)));}
-        #nbTouchUse{right:max(146px,calc(146px + env(safe-area-inset-right)));bottom:max(10px,calc(10px + env(safe-area-inset-bottom)));}
-        #nbTouchStore{right:max(10px,env(safe-area-inset-right));bottom:max(10px,calc(10px + env(safe-area-inset-bottom)));}
-        #nbTouchJump{right:max(146px,calc(146px + env(safe-area-inset-right)));bottom:max(78px,calc(78px + env(safe-area-inset-bottom)));}
-      }
+      /* Positioning is defined once in style.css; this block only supplies base button behavior. */
       #nbTouchFire{display:none !important;}
       @media (min-width: 900px) and (pointer: coarse){
         .nb-touch-btn{width:70px;height:70px;}
@@ -7723,21 +7709,19 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
         if(shopCount(type)>0){setShopActive(type);announce(tr(`تم تحديد ${shopLabel(type)}` ,`${shopLabel(type)} selected`),900);return;}
         if(coins<cost){announce(tr('العملات غير كافية','Not enough coins'),1200);return;}
         coins-=cost; state.shop[type]++; state.shopActive=type; saveShop(); updateHUD(); updateShopUI(); updateUI();
-        announce(tr(`تم شراء ${shopLabel(type)} — اضغط زر الاستخدام`,`Purchased ${shopLabel(type)} — press Use`),1500);
+        announce(tr(`تم شراء ${shopLabel(type)} — استخدم زر 🎒 خارج المتجر`,`Use the 🎒 button outside the shop`),1500);
       };
     });
     const selectedInfo=box.querySelector('#adventureShopSelected');
-    const useBtn=box.querySelector('[data-shop-use]');
     const activeType=state.shopActive&&shopCount(state.shopActive)>0?state.shopActive:null;
-    if(selectedInfo) selectedInfo.innerHTML=activeType ? `<b>${shopLabel(activeType)}</b><small>${tr(`المخزون: ${shopCount(activeType)}` ,`Stock: ${shopCount(activeType)}`)}</small>` : `<b>${tr('لا يوجد عنصر محدد','No item selected')}</b><small>${tr('اشترِ عنصرًا ثم حدده للاستخدام','Buy an item and select it to use')}</small>`;
-    if(useBtn){useBtn.textContent=`🎒 ${tr('استخدام','Use')}`;useBtn.disabled=!activeType;useBtn.style.opacity=activeType?'1':'.45';useBtn.onclick=()=>{if(useShopItem()){updateShopUI();}};}
+    if(selectedInfo) selectedInfo.innerHTML=activeType ? `<b>${shopLabel(activeType)}</b><small>${tr(`المخزون: ${shopCount(activeType)}` ,`Stock: ${shopCount(activeType)}`)}</small>` : `<b>${tr('لا يوجد عنصر محدد','No item selected')}</b><small>${tr('اشترِ عنصرًا ثم حدده للاستخدام من زر 🎒 خارج المتجر','Buy an item, then use it with the 🎒 button outside the shop')}</small>`;
     const close=box.querySelector('[data-shop-close]'); if(close)close.textContent=tr('إغلاق','Close');
   }
   function openShop(){
     let box=document.getElementById('adventureShop');
     if(!box){
       box=document.createElement('div'); box.id='adventureShop';
-      box.innerHTML=`<div class="adventure-modal-box"><div class="shop-head"><div><h2>${tr('🛒 المتجر','🛒 Shop')}</h2><div id="adventureShopCoins"></div></div><div id="adventureShopSelected" class="shop-selected-info">${tr('اختر عنصرًا','Select an item')}</div></div><div id="adventureShopItems"></div><div class="shop-actions"><button type="button" data-shop-use class="menu-action menu-green">🎒 ${tr('استخدام','Use')}</button><button type="button" data-shop-close class="menu-action menu-green">${tr('إغلاق','Close')}</button></div></div>`;
+      box.innerHTML=`<div class="adventure-modal-box"><div class="shop-head"><div><h2>${tr('🛒 المتجر','🛒 Shop')}</h2><div id="adventureShopCoins"></div></div><div id="adventureShopSelected" class="shop-selected-info">${tr('اختر عنصرًا','Select an item')}</div></div><div id="adventureShopItems"></div><div class="shop-actions"><button type="button" data-shop-close class="menu-action menu-green">${tr('إغلاق','Close')}</button></div></div>`;
       document.body.appendChild(box);
       box.querySelector('[data-shop-close]').onclick=()=>box.style.display='none';
     }
