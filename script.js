@@ -6726,16 +6726,22 @@ setLanguage(selectedLanguage);
    ============================================================ */
 const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
   const behavior=["chaser","ambush","jumper","shooter","barrierJumper","fast","hunter"][i%7];
+  const tier=Math.floor(i/10);
   return {
     id:i+1, behavior,
-    speed:0.82 + (i%10)*0.045,
-    vision:520 + (i%8)*70,
-    attackDelay:34 + (i%9)*9,
-    shootDelay:55 + (i%10)*10,
-    jumpDelay:38 + (i%8)*8,
-    jumpPower:8.0 + (i%6)*0.45,
-    aggression:0.80 + (i%7)*0.10,
-    patrol:0.75 + (i%5)*0.12
+    // Every family has its own tuning; behavior archetypes are shared only
+    // as implementation primitives, never as identical enemy settings.
+    speed:0.78 + i*0.032 + (tier%2)*0.08,
+    vision:430 + i*31 + (i%4)*55,
+    attackDelay:30 + (i*7)%95,
+    shootDelay:45 + (i*11)%120,
+    jumpDelay:30 + (i*9)%85,
+    jumpPower:7.6 + (i%12)*0.48 + tier*0.22,
+    aggression:0.72 + (i%14)*0.045,
+    patrol:0.65 + (i%11)*0.075,
+    dodge:0.15 + (i%10)*0.045,
+    reaction:0.35 + (i%13)*0.055,
+    burst:0.8 + (i%9)*0.22
   };
 });
 
@@ -7985,3 +7991,453 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
   if(issues.length) console.warn("Game integrity checks:", issues);
 })();
 
+
+
+/* ============================================================
+   ADVENTURE FEATURE SYSTEM — SINGLE CANONICAL EXPANSION
+   All optional excitement systems live here to avoid duplicate patches.
+   This layer wraps the stable core once and never replaces core gameplay.
+   ============================================================ */
+(function installAdventureFeatureSystem(){
+  if (window.__AdventureFeatureSystemInstalled) return;
+  window.__AdventureFeatureSystemInstalled = true;
+
+  const SAVE_KEY = 'naughtyBoyAdventureV1';
+  const TAU = Math.PI * 2;
+  const state = {
+    stage: 0, startTime: 0, kills: 0, combo: 0, comboUntil: 0,
+    gold: [], gems: [], boxes: [], powerups: [], projectiles: [],
+    boss: null, chase: null, event: null, secret: null, weather: 'clear',
+    activePower: null, powerUntil: 0, doubleUsed: false, jumpWasDown: false,
+    challenge: null, completed: false, stageDeaths: 0, rareCount: 0,
+    timeAttack: false, timeAttackBest: {}, achievements: {}, upgrades: {
+      speed: 0, jump: 0, health: 0, laser: 0, shield: 0
+    },
+    nextEventAt: 0, bannerUntil: 0, banner: '', eventSeed: 0
+  };
+
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const diff=()=>0.10+((currentLevel-1)/Math.max(1,TOTAL_LEVELS-1))*0.60;
+  const tr=(ar,en)=>selectedLanguage==='en'?en:ar;
+  const rect=o=>({x:o.x,y:o.y,width:o.width||o.w,height:o.height||o.h});
+  const hit=(a,b)=>typeof intersects==='function'&&intersects(rect(a),rect(b));
+  const now=()=>performance.now();
+
+  function loadProfile(){
+    try{
+      const d=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');
+      if(d && typeof d==='object'){
+        if(d.upgrades) state.upgrades={...state.upgrades,...d.upgrades};
+        state.achievements=d.achievements||{};
+        state.timeAttackBest=d.timeAttackBest||{};
+      }
+    }catch(_){ }
+  }
+  function saveProfile(){
+    try{localStorage.setItem(SAVE_KEY,JSON.stringify({upgrades:state.upgrades,achievements:state.achievements,timeAttackBest:state.timeAttackBest}));}catch(_){ }
+  }
+
+  function announce(text, ms=1900){
+    state.banner=String(text); state.bannerUntil=now()+ms;
+    if(typeof announce==='function' && announce!==window.__adventureAnnounce){
+      try{window.__adventureAnnounce(text);}catch(_){ }
+    }
+    let el=document.getElementById('adventureBanner');
+    if(!el){
+      el=document.createElement('div'); el.id='adventureBanner'; document.body.appendChild(el);
+    }
+    el.textContent=state.banner;
+    el.style.display='block';
+  }
+  window.__adventureAnnounce=announce;
+
+  function addStyle(){
+    if(document.getElementById('adventureFeatureStyle')) return;
+    const st=document.createElement('style'); st.id='adventureFeatureStyle';
+    st.textContent=`
+      #adventureHUD{position:fixed;left:12px;bottom:14px;z-index:10020;display:none;gap:6px;flex-wrap:wrap;max-width:min(92vw,900px);font:800 12px system-ui,sans-serif;pointer-events:none}
+      #adventureHUD span{background:rgba(10,18,28,.82);color:#fff;padding:7px 9px;border-radius:11px;box-shadow:0 3px 12px rgba(0,0,0,.22)}
+      #adventureBanner{position:fixed;left:50%;top:14%;transform:translateX(-50%);z-index:10030;display:none;max-width:90vw;padding:12px 18px;border-radius:15px;background:rgba(9,16,26,.92);color:#fff;font:900 18px system-ui,sans-serif;text-align:center;box-shadow:0 10px 35px rgba(0,0,0,.35);pointer-events:none}
+      #adventureChallenge{position:fixed;right:12px;top:112px;z-index:10015;display:none;min-width:190px;max-width:270px;padding:10px;border-radius:14px;background:rgba(9,16,26,.78);color:#fff;font:700 12px system-ui,sans-serif;pointer-events:none}
+      #adventureChallenge b{display:block;font-size:14px;margin-bottom:4px}
+      #adventurePowerPanel{position:fixed;right:12px;bottom:14px;z-index:10020;display:none;padding:8px 10px;border-radius:12px;background:rgba(9,16,26,.84);color:#fff;font:800 12px system-ui,sans-serif;pointer-events:none}
+      @media(max-width:700px){#adventureHUD{left:8px;right:8px;bottom:88px;max-width:calc(100vw - 16px)}#adventureChallenge{top:145px;right:8px;min-width:160px;max-width:45vw;font-size:10px}#adventureBanner{top:19%;font-size:15px}}
+    `;
+    document.head.appendChild(st);
+  }
+  function addUI(){
+    addStyle();
+    for(const id of ['adventureHUD','adventureChallenge','adventurePowerPanel','adventureBanner']){
+      if(!document.getElementById(id)) document.body.insertAdjacentHTML('beforeend', id==='adventureHUD'?`<div id="adventureHUD"><span id="advCombo">🔥 ×0</span><span id="advGems">💎 0</span><span id="advTime">⏱️ 0:00</span><span id="advPower">🎒 —</span><span id="advWeather">☀️</span></div>`:id==='adventureChallenge'?`<div id="adventureChallenge"><b id="advChallengeTitle">🎯 Challenge</b><div id="advChallengeText"></div></div>`:id==='adventurePowerPanel'?`<div id="adventurePowerPanel">Q: <b id="advPowerUse">—</b></div>`:'');
+    }
+  }
+
+  function applyUpgrades(){
+    const u=state.upgrades;
+    player.walkSpeed=4.2 + u.speed*0.18;
+    player.runSpeed=7.5 + u.speed*0.28;
+    player.normalJump=13.5 + u.jump*0.28;
+    player.runJump=16.5 + u.jump*0.34;
+    player.gravity=0.62;
+  }
+
+  function stageChallenge(){
+    const d=diff(), targetKills=Math.max(3,Math.floor(4+d*9));
+    const targetCoins=Math.max(8,Math.floor(coinList.length*(0.28+d*0.18)));
+    const kind=currentLevel%4;
+    if(kind===0) return {kind:'coins',target:targetCoins,done:0,label:tr('جمع العملات','Collect coins')};
+    if(kind===1) return {kind:'kills',target:targetKills,done:0,label:tr('اهزم الأعداء','Defeat enemies')};
+    if(kind===2) return {kind:'time',target:Math.max(65,185-currentLevel*2),done:0,label:tr('الإنهاء بسرعة','Finish quickly')};
+    return {kind:'safe',target:0,done:0,label:tr('بدون ضرر','No damage')};
+  }
+
+  function deterministicExtras(){
+    const d=diff(), list=platforms.filter(p=>!p._moving&&!p._bridge&&p.width>100);
+    state.gold=[]; state.gems=[]; state.boxes=[]; state.powerups=[]; state.projectiles=[];
+    const stride=Math.max(3,Math.floor(7-d*2));
+    list.forEach((p,i)=>{
+      if(i>1 && i<list.length-2 && i%stride===0) state.gold.push({x:p.x+p.width*.5,y:p.y-58,width:22,height:28,collected:false});
+      if(i>4 && i<list.length-4 && (i+currentLevel)%11===0) state.gems.push({x:p.x+p.width*.5,y:p.y-82,width:28,height:28,collected:false});
+      if(i>6 && i<list.length-3 && (i+currentLevel)%13===0) state.boxes.push({x:p.x+p.width*.7,y:p.y-35,width:34,height:34,opened:false,type:(i+currentLevel)%6});
+      if(i>3 && i<list.length-3 && (i+currentLevel)%17===0) state.powerups.push({x:p.x+p.width*.35,y:p.y-54,width:30,height:30,collected:false,type:['fire','speed','double','magnet','shield','ghost'][(i+currentLevel)%6]});
+    });
+    if(currentLevel%3===0 && list.length>12){
+      const p=list[Math.floor(list.length*.52)]; state.secret={x:p.x+p.width*.5,y:p.y-40,width:42,height:70,found:false,used:false};
+    } else state.secret=null;
+
+    // Rare enemies: existing enemies are upgraded in-place; no second enemy list.
+    state.rareCount=0;
+    enemies.forEach((e,i)=>{
+      e._rare=false;
+      if((i+currentLevel*3)%19===0){e._rare=true; e._rareBonus=300+currentLevel*15; state.rareCount++;}
+    });
+  }
+
+  function createBoss(){
+    if(currentLevel%5!==0) return null;
+    const d=diff(), x=Math.max(900,currentLevelWidth-850);
+    return {x,y:420,width:92,height:96,hp:3+Math.floor(d*5),maxHp:3+Math.floor(d*5),vx:0,vy:0,phase:0,attack:90,shot:130,alive:true,defeated:false,dir:-1,flash:0};
+  }
+
+  function resetStage(){
+    state.stage=currentLevel; state.startTime=now(); state.kills=0; state.combo=0; state.comboUntil=0; state.completed=false; state.stageDeaths=0; state.activePower=null; state.powerUntil=0; state.doubleUsed=false; state.jumpWasDown=false;
+    state.boss=createBoss(); state.chase=null; state.event=null; state.nextEventAt=now()+18000+currentLevel*250; state.weather=['clear','rain','storm','fog'][currentLevel%4];
+    state.challenge=stageChallenge(); state.eventSeed=currentLevel*9973; state._aliveSnapshot=new Map(); state.gemsCollected=0; state.shieldHits=state.upgrades.shield>0?1:0; state.eventRock=null; state.qWasDown=false; state.gWasDown=false;
+    if(lives < 3 + Number(state.upgrades.health||0)) lives = 3 + Number(state.upgrades.health||0);
+    deterministicExtras(); applyUpgrades(); updateUI();
+  }
+
+  function reward(amount, pts=0){ coins+=amount; score+=pts; if(typeof updateHUD==='function')updateHUD(); }
+
+  function collectSpecials(){
+    for(const c of state.gold){
+      if(!c.collected && hit(player,c)){c.collected=true;reward(5,80);soundCoin();}
+    }
+    for(const g of state.gems){
+      if(!g.collected && hit(player,g)){g.collected=true;state.gemsCollected=(state.gemsCollected||0)+1;reward(25,300);soundCoin();announce(tr('💎 ألماسة نادرة +25 عملة','💎 Rare diamond +25 coins'),1200);}
+    }
+    for(const b of state.boxes){
+      if(!b.opened && hit(player,b)) openBox(b);
+    }
+    for(const p of state.powerups){
+      if(!p.collected && hit(player,p)){p.collected=true;state.activePower=p.type;state.powerUntil=now()+20000;announce(powerLabel(p.type),1500);}
+    }
+    if(state.secret && !state.secret.found && hit(player,state.secret)){state.secret.found=true;reward(100,1000);state.achievements.secret=true;saveProfile();announce(tr('🗺️ اكتشفت غرفة سرية! +100','🗺️ Secret room found! +100'),2200);}
+    if(state.activePower==='magnet' && now()<state.powerUntil){
+      for(const c of coinList){if(c.collected)continue; const dx=player.x-c.x,dy=(player.y+20)-c.y,d=Math.hypot(dx,dy); if(d<180){c.x+=dx*.08;c.y+=dy*.08;}}
+    }
+  }
+
+  function powerLabel(t){return ({fire:tr('🔥 قوة النار!','🔥 Fire Power!'),speed:tr('⚡ سرعة خارقة!','⚡ Super Speed!'),double:tr('🪽 قفزة مزدوجة!','🪽 Double Jump!'),magnet:tr('🧲 مغناطيس العملات!','🧲 Coin Magnet!'),shield:tr('🛡️ درع!','🛡️ Shield!'),ghost:tr('👻 شبح!','👻 Ghost!')})[t]||t;}
+
+  function openBox(b){
+    b.opened=true;
+    const r=b.type;
+    if(r===0){reward(20,200);announce(tr('🎁 صندوق ذهب +20','🎁 Gold chest +20'),1300);}
+    else if(r===1){state.activePower='shield';state.powerUntil=now()+25000;announce(powerLabel('shield'),1300);}
+    else if(r===2){reward(50,500);announce(tr('💎 كنز +50 عملة','💎 Treasure +50 coins'),1300);}
+    else if(r===3){lives++;updateHUD();announce(tr('❤️ حياة إضافية!','❤️ Extra life!'),1300);}
+    else if(r===4){state.activePower='speed';state.powerUntil=now()+15000;announce(powerLabel('speed'),1300);}
+    else{state.chase={x:player.x+canvas.width+200,y:390,width:110,height:100,active:true,life:720};announce(tr('🚨 اهرب! وحش المطاردة قادم!','🚨 RUN! The chase monster is coming!'),2200);}
+  }
+
+  function activatePower(){
+    if(!state.activePower || now()>state.powerUntil) return;
+    const p=state.activePower;
+    if(p==='shield'){state.shieldHits=1;}
+    if(p==='ghost'){state.ghostUntil=now()+8000;}
+    if(p==='double'){state.doubleReady=true;}
+    if(p==='fire'){state.fireReady=true;}
+    if(p==='speed'){state.powerUntil=now()+10000;}
+    state.activePower=null;
+  }
+
+  function fireball(){
+    if(!state.fireReady) return;
+    state.fireReady=false;
+    state.projectiles.push({x:player.x+player.width/2,y:player.y+24,width:18,height:12,vx:player.direction*8,life:100,kind:'fire'});
+    try{playTone(520,.05,'sawtooth',.04,160);}catch(_){ }
+  }
+
+  function updatePowerProjectiles(){
+    for(let i=state.projectiles.length-1;i>=0;i--){
+      const q=state.projectiles[i]; q.x+=q.vx;q.life--;
+      let remove=q.life<=0;
+      for(const e of enemies){if(!remove&&e.alive&&hit(q,e)){e.alive=false;onEnemyDefeated(e,true);remove=true;}}
+      if(state.boss&&state.boss.alive&&!remove&&hit(q,state.boss)){state.boss.hp--;state.boss.flash=8;score+=250;remove=true;try{playTone(820,.06,'square',.04,-180);}catch(_){ }if(state.boss.hp<=0)defeatBoss();}
+      if(remove)state.projectiles.splice(i,1);
+    }
+  }
+
+  function onEnemyDefeated(e,bonus=false){
+    state.kills++;state.combo=state.combo>0?state.combo+1:1;state.comboUntil=now()+2600;
+    const mult=state.combo>=10?5:state.combo>=5?3:state.combo>=3?2:1;
+    score+=100*mult;
+    if(e._rare){reward(10,e._rareBonus||300);announce(tr('✨ عدو نادر! +مكافأة','✨ Rare enemy! Bonus reward'),1000);}
+    if(state.combo>=3)announce(`🔥 COMBO ×${mult}`,700);
+    if(state.challenge&&state.challenge.kind==='kills')state.challenge.done=state.kills;
+  }
+
+  function monitorKills(){
+    if(!state._aliveSnapshot){state._aliveSnapshot=new Map();}
+    for(const e of enemies){
+      if(!state._aliveSnapshot.has(e)) state._aliveSnapshot.set(e,e.alive);
+      const prev=state._aliveSnapshot.get(e);
+      if(prev && !e.alive){onEnemyDefeated(e);state._aliveSnapshot.set(e,false);} else if(!prev&&e.alive)state._aliveSnapshot.set(e,true);
+    }
+  }
+
+  function updateBoss(){
+    const b=state.boss;if(!b||!b.alive)return;
+    const d=diff(); b.phase+=.05+d*.03; b.flash=Math.max(0,b.flash-1); b.attack--;b.shot--;
+    const dx=player.x-b.x;
+    if(Math.abs(dx)<900){b.dir=dx<0?-1:1;b.x+=b.dir*(1.2+d*2.2);}
+    b.x=clamp(b.x,currentLevelWidth-1100,currentLevelWidth-260);
+    if(b.attack<=0){b.vy=-10-d*4;b.attack=Math.max(55,105-d*35);}
+    b.vy+=.45;b.y+=b.vy;if(b.y>420){b.y=420;b.vy=0;}
+    if(b.shot<=0&&Math.abs(dx)<850){b.shot=Math.max(70,145-d*50);state.projectiles.push({x:b.x+b.width/2,y:b.y+35,width:18,height:12,vx:(dx<0?-6:6)-d*1.2,life:150,kind:'boss'});}
+    if(hit(player,b)){
+      const pb=player.y+player.height, prev=pb-player.vy;
+      if(player.vy>0&&prev<=b.y+24){b.hp--;player.y=b.y-player.height;player.vy=-12;score+=250;b.flash=8;try{soundEnemyStomp();}catch(_){ }if(b.hp<=0)defeatBoss();}
+      else if(now()>damageInvulnerableUntil){
+        if(state.activePower==='shield'||state.shieldHits>0){state.shieldHits=0;damageInvulnerableUntil=now()+900;announce(tr('🛡️ الدرع أنقذك!','🛡️ Shield saved you!'),900);}
+        else playerDied('enemy');
+      }
+    }
+  }
+  function defeatBoss(){if(!state.boss||!state.boss.alive)return;state.boss.alive=false;state.boss.defeated=true;reward(50,2500);state.achievements.boss=true;saveProfile();announce(tr('👑 هزمت الزعيم! +50 عملة','👑 Boss defeated! +50 coins'),2400);}
+
+  function updateChase(){
+    const c=state.chase;if(!c||!c.active)return;
+    c.life--;c.x-=5+diff()*5;c.y=player.y-20;
+    if(c.x+70<player.x){c.active=false;return;}
+    if(hit(player,c)&&now()>damageInvulnerableUntil){
+      if(state.activePower==='shield'||state.shieldHits>0){state.shieldHits=0;c.active=false;announce(tr('🛡️ هربت بالدرع!','🛡️ You escaped with the shield!'),900);}
+      else playerDied('enemy');
+    }
+    if(c.life<=0)c.active=false;
+  }
+
+  function updateEvents(){
+    if(now()<state.nextEventAt||state.event)return;
+    const choices=['meteor','flood','wind','storm'];
+    state.event=choices[(currentLevel+Math.floor(state.eventSeed/9973))%choices.length];
+    state.eventEnds=now()+8500;
+    state.nextEventAt=now()+22000+Math.random()*12000;
+    announce(({meteor:tr('🪨 وابل صخور!','🪨 Rock shower!'),flood:tr('🌊 الماء يرتفع!','🌊 Rising water!'),wind:tr('🌪️ رياح قوية!','🌪️ Strong wind!'),storm:tr('⛈️ عاصفة!','⛈️ Storm!')})[state.event],1600);
+  }
+  function applyEvent(){
+    if(!state.event)return;
+    if(now()>state.eventEnds){state.event=null;return;}
+    if(state.event==='wind')player.vx+=Math.sin(now()*.004)*.035*(1+diff()*2);
+    if(state.event==='flood'&&player.y>470&&Math.sin(now()*.004)>.2&&now()>damageInvulnerableUntil){
+      if(player.y+player.height>canvas.height+40)playerDied('hazard');
+    }
+    if(state.event==='meteor'&&Math.floor(now()/850)%2===0){
+      const sx=cameraX+canvas.width*.72; const sy=-40;
+      if(!state.eventRock||state.eventRock.dead){state.eventRock={x:sx,y:sy,v:1.5,dead:false};}
+    }
+    if(state.eventRock&&!state.eventRock.dead){const r=state.eventRock;r.v+=.38;r.y+=r.v;if(hit(player,{x:r.x,y:r.y,width:36,height:36})&&now()>damageInvulnerableUntil){playerDied('hazard');r.dead=true;}if(r.y>650)r.dead=true;}
+  }
+
+  function updateWeather(){
+    // Visual weather is rendered by this same system; no world renderer is replaced.
+  }
+
+  function checkChallenge(){
+    const c=state.challenge;if(!c)return;
+    const elapsed=(now()-state.startTime)/1000;
+    if(c.kind==='coins')c.done=Math.max(c.done,coins-(levelStartCoins||0));
+    if(c.kind==='time')c.done=elapsed;
+    if(c.kind==='safe')c.done=state.stageDeaths;
+  }
+  function challengeComplete(){
+    const c=state.challenge;if(!c)return false;
+    if(c.kind==='coins'||c.kind==='kills')return c.done>=c.target;
+    if(c.kind==='time')return c.done<=c.target;
+    return c.done===0;
+  }
+
+  function finalizeStage(){
+    if(state.completed)return;
+    state.completed=true;
+    const elapsed=(now()-state.startTime)/1000;
+    const allCoins=coinList.length||1, collected=coinList.filter(c=>c.collected).length;
+    const star3=collected/allCoins>=.70 && state.stageDeaths===0;
+    const star2=collected/allCoins>=.40 || state.kills>=Math.max(3,Math.floor(enemies.length*.4));
+    const stars=star3?3:star2?2:1;
+    try{
+      const k='naughtyBoySaveV5',d=JSON.parse(localStorage.getItem(k)||'{}');d.stars=d.stars||{};d.stars[currentLevel]=Math.max(Number(d.stars[currentLevel]||0),stars);localStorage.setItem(k,JSON.stringify(d));
+    }catch(_){ }
+    if(state.timeAttack){
+      const old=Number(state.timeAttackBest[currentLevel]||Infinity);if(elapsed<old){state.timeAttackBest[currentLevel]=elapsed;saveProfile();announce(tr(`🏆 رقم قياسي: ${formatTime(elapsed)}`,`🏆 New record: ${formatTime(elapsed)}`),2200);}
+    }
+    if(challengeComplete()){state.achievements.challenge=true;reward(15,750);announce(tr('🎯 أنجزت تحدي المرحلة! +15','🎯 Stage challenge complete! +15'),1800);}
+    if(state.rareCount&&state.kills>=state.rareCount)state.achievements.rare=true;
+    if(state.combo>=10)state.achievements.combo=true;
+    saveProfile();
+    state._lastResult={elapsed,stars,collected,allCoins,kills:state.kills};
+  }
+
+  function formatTime(s){s=Math.max(0,Math.floor(s));return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;}
+
+  function useKeyEdge(){
+    const q=!!keys['q']; if(q&&!state.qWasDown)activatePower(); state.qWasDown=q;
+    const g=!!keys['g']; if(g&&!state.gWasDown)fireball(); state.gWasDown=g;
+    const jump=!!(keys['arrowup']||keys['w']||keys[' ']);
+    if(jump&&!state.jumpWasDown&&state.activePower==='double'&&!player.ground&&!state.doubleUsed){player.vy=-15.5;state.doubleUsed=true;}
+    if(player.ground)state.doubleUsed=false;
+    state.jumpWasDown=jump;
+  }
+
+  function updateUI(){
+    const active=!!(gameRunning&&!gameOver&&!gameWon);
+    const hud=document.getElementById('adventureHUD'); if(hud)hud.style.display=active?'flex':'none';
+    const ch=document.getElementById('adventureChallenge'); if(ch)ch.style.display=active?'block':'none';
+    const pp=document.getElementById('adventurePowerPanel'); if(pp)pp.style.display=active?'block':'none';
+    const elapsed=state.startTime?((now()-state.startTime)/1000):0;
+    const combo=state.combo>0&&now()<state.comboUntil?state.combo:0;
+    const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+    set('advCombo',`🔥 ×${combo}`);set('advGems',`💎 ${state.gems.filter(x=>x.collected).length}`);set('advTime',`⏱️ ${formatTime(elapsed)}`);set('advPower',state.activePower?`🎒 ${state.activePower} ${Math.max(0,Math.ceil((state.powerUntil-now())/1000))}s`:'🎒 —');
+    set('advWeather',state.weather==='rain'?'🌧️':state.weather==='storm'?'⛈️':state.weather==='fog'?'🌫️':'☀️');
+    if(state.challenge){const c=state.challenge;set('advChallengeTitle',`🎯 ${c.label}`);set('advChallengeText',c.kind==='time'?`${formatTime(c.done)} / ${formatTime(c.target)}`:c.kind==='safe'?`${c.done===0?tr('بدون إصابة','No damage'):tr('تعرضت لضرر','Took damage')}`:`${Math.min(c.done,c.target)} / ${c.target}`);}
+    set('advPowerUse',state.activePower?'Q':'—');
+    const banner=document.getElementById('adventureBanner');if(banner)banner.style.display=state.bannerUntil>now()? 'block':'none';
+  }
+
+  function drawExtras(){
+    if(!ctx)return;
+    const t=now();
+    ctx.save();
+    // Gold coins and gems.
+    for(const c of state.gold){if(c.collected)continue;const x=c.x-cameraX,y=c.y+Math.sin(t*.006+c.x)*5;ctx.fillStyle='#ffd54a';ctx.beginPath();ctx.ellipse(x,y,10,14,0,0,TAU);ctx.fill();ctx.strokeStyle='#fff1a8';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#7a4d00';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillText('G',x,y+4);}
+    for(const g of state.gems){if(g.collected)continue;const x=g.x-cameraX,y=g.y+Math.sin(t*.005+g.x)*5;ctx.fillStyle='#8ef';ctx.beginPath();ctx.moveTo(x,y-15);ctx.lineTo(x+12,y);ctx.lineTo(x,y+15);ctx.lineTo(x-12,y);ctx.closePath();ctx.fill();ctx.strokeStyle='#fff';ctx.stroke();}
+    // Mystery boxes.
+    for(const b of state.boxes){if(b.opened)continue;const x=b.x-cameraX,y=b.y;ctx.fillStyle='#d99a2b';ctx.fillRect(x,y,b.width,b.height);ctx.strokeStyle='#fff1a8';ctx.strokeRect(x+2,y+2,b.width-4,b.height-4);ctx.fillStyle='#fff';ctx.font='bold 22px sans-serif';ctx.textAlign='center';ctx.fillText('?',x+b.width/2,y+25);}
+    // Power-ups.
+    const icons={fire:'🔥',speed:'⚡',double:'🪽',magnet:'🧲',shield:'🛡️',ghost:'👻'};
+    for(const p of state.powerups){if(p.collected)continue;const x=p.x-cameraX,y=p.y+Math.sin(t*.005+p.x)*4;ctx.font='28px sans-serif';ctx.textAlign='center';ctx.fillText(icons[p.type]||'🎁',x,y+24);}
+    // Secret door.
+    if(state.secret&&!state.secret.found){const x=state.secret.x-cameraX,y=state.secret.y;ctx.fillStyle='rgba(90,30,150,.9)';ctx.fillRect(x-21,y,42,70);ctx.fillStyle='#ffd54a';ctx.beginPath();ctx.arc(x+10,y+36,4,0,TAU);ctx.fill();ctx.font='22px sans-serif';ctx.textAlign='center';ctx.fillText('?',x,y+28);}
+    // Rare enemy sparkle. Existing enemy renderer remains untouched.
+    for(const e of enemies){if(e.alive&&e._rare){const x=e.x-cameraX,y=e.y;ctx.fillStyle='#ffd54a';for(let k=0;k<4;k++){const a=t*.004+k*Math.PI/2;ctx.fillRect(x+e.width*.5+Math.cos(a)*20-2,y+e.height*.35+Math.sin(a)*20-2,4,4);}}}
+    // Boss.
+    const b=state.boss;if(b&&b.alive){const x=b.x-cameraX,y=b.y;ctx.save();if(b.flash>0)ctx.globalAlpha=.55;ctx.fillStyle='#54205f';ctx.beginPath();ctx.ellipse(x+b.width/2,y+55,46,40,0,0,TAU);ctx.fill();ctx.fillStyle='#9b3fb0';ctx.beginPath();ctx.arc(x+b.width/2,y+25,34,0,TAU);ctx.fill();ctx.fillStyle='#ffdb4d';ctx.beginPath();ctx.arc(x+32,y+22,6,0,TAU);ctx.arc(x+60,y+22,6,0,TAU);ctx.fill();ctx.fillStyle='#111';ctx.beginPath();ctx.arc(x+32,y+22,2,0,TAU);ctx.arc(x+60,y+22,2,0,TAU);ctx.fill();ctx.fillStyle='#f33';ctx.fillRect(x+12,y-18,68,8);ctx.fillStyle='#58e05c';ctx.fillRect(x+12,y-18,68*(b.hp/b.maxHp),8);ctx.restore();}
+    // Chase monster.
+    if(state.chase&&state.chase.active){const c=state.chase,x=c.x-cameraX,y=c.y;ctx.fillStyle='#20252d';ctx.beginPath();ctx.ellipse(x+55,y+55,55,43,0,0,TAU);ctx.fill();ctx.fillStyle='#e33';ctx.beginPath();ctx.arc(x+35,y+45,7,0,TAU);ctx.arc(x+75,y+45,7,0,TAU);ctx.fill();}
+    // Lightweight day/dusk/night cycle: subtle overlay + celestial marker.
+    const cycle=(currentLevel*0.21 + (t-state.startTime)/1000/70)%1;
+    const night=Math.max(0,Math.min(1,(Math.abs(cycle-.65)-.22)*3.2));
+    if(night>.05){ctx.fillStyle=`rgba(18,24,70,${0.045*night})`;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='rgba(255,245,190,.9)';ctx.beginPath();ctx.arc(canvas.width-75,70,18,0,TAU);ctx.fill();}
+    else {ctx.fillStyle='rgba(255,220,80,.75)';ctx.beginPath();ctx.arc(canvas.width-75,70,20,0,TAU);ctx.fill();}
+    // Weather overlays.
+    if(state.weather==='rain'||state.event==='storm'){ctx.strokeStyle='rgba(190,220,255,.35)';ctx.lineWidth=2;for(let i=0;i<70;i++){const x=(i*83+t*.22)%canvas.width,y=(i*47+t*.65)%canvas.height;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-4,y+13);ctx.stroke();}}
+    if(state.weather==='fog'){ctx.fillStyle='rgba(230,240,240,.10)';ctx.fillRect(0,0,canvas.width,canvas.height);}
+    if(state.event==='storm'){ctx.fillStyle='rgba(40,50,90,.12)';ctx.fillRect(0,0,canvas.width,canvas.height);}
+    if(state.eventRock&&!state.eventRock.dead){ctx.font='34px sans-serif';ctx.textAlign='center';ctx.fillText('🪨',state.eventRock.x-cameraX,state.eventRock.y+30);}
+    // Combo floating label.
+    if(state.combo>=2&&now()<state.comboUntil){ctx.font='900 22px sans-serif';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(`COMBO ×${state.combo}`,player.x-cameraX+player.width/2,player.y-25);}
+    ctx.restore();
+  }
+
+  function upgradeMenu(){
+    const old=document.getElementById('adventureUpgradePanel');if(old)old.remove();
+    const el=document.createElement('div');el.id='adventureUpgradePanel';el.style.cssText='position:fixed;inset:0;z-index:10050;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);font-family:system-ui,sans-serif;';
+    const box=document.createElement('div');box.style.cssText='width:min(92vw,520px);padding:22px;border-radius:22px;background:#14202b;color:#fff;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);';
+    const rows=[['speed','🏃'],['jump','🦘'],['health','❤️'],['laser','🔫'],['shield','🛡️']];
+    box.innerHTML=`<h2>${tr('👑 تطوير الشخصية','👑 Character Upgrades')}</h2><p>${tr('كل تطوير يكلف 150 عملة','Each upgrade costs 150 coins')}</p>`;
+    for(const [k,ic] of rows){const b=document.createElement('button');b.textContent=`${ic} ${k} ⭐${state.upgrades[k]}`;b.style.cssText='display:block;width:100%;margin:7px 0;padding:11px;border:0;border-radius:12px;font-weight:800;cursor:pointer;';b.onclick=()=>{if(coins<150){announce(tr('لا توجد عملات كافية','Not enough coins'));return;}if(state.upgrades[k]>=5){announce(tr('وصلت للحد الأقصى','Max level reached'));return;}coins-=150;state.upgrades[k]++;saveProfile();applyUpgrades();updateHUD();b.textContent=`${ic} ${k} ⭐${state.upgrades[k]}`;};box.appendChild(b);}
+    const close=document.createElement('button');close.textContent=tr('إغلاق','Close');close.style.cssText='margin-top:10px;padding:10px 22px;border:0;border-radius:12px;cursor:pointer;';close.onclick=()=>el.remove();box.appendChild(close);el.appendChild(box);document.body.appendChild(el);
+  }
+
+  function showAchievements(){
+    const old=document.getElementById('adventureAchievements');if(old)old.remove();
+    const el=document.createElement('div');el.id='adventureAchievements';el.style.cssText='position:fixed;inset:0;z-index:10060;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.65);font-family:system-ui,sans-serif;';
+    const names=[['boss','👑 هزيمة زعيم / Boss Slayer'],['challenge','🎯 تحدي المرحلة / Challenge Master'],['secret','🗺️ اكتشاف الأسرار / Secret Hunter'],['rare','✨ صائد الأعداء النادرين / Rare Hunter'],['combo','🔥 كومبو ×10 / Combo Master']];
+    const done=names.map(([k,n])=>`<div style="padding:9px;margin:6px 0;border-radius:10px;background:${state.achievements[k]?'rgba(46,204,113,.25)':'rgba(255,255,255,.08)'}">${state.achievements[k]?'✅':'🔒'} ${selectedLanguage==='en'?n.split(' / ')[1]:n.split(' / ')[0]}</div>`).join('');
+    el.innerHTML=`<div style="width:min(90vw,480px);padding:22px;border-radius:22px;background:#14202b;color:#fff;text-align:center"><h2>${tr('🏅 الإنجازات','🏅 Achievements')}</h2>${done}<button style="margin-top:12px;padding:10px 22px;border:0;border-radius:12px;cursor:pointer">${tr('إغلاق','Close')}</button></div>`;
+    el.querySelector('button').onclick=()=>el.remove();document.body.appendChild(el);
+  }
+
+  function addMenuButtons(){
+    const menu=document.getElementById('gameStartMenu');if(!menu||menu.dataset.adventureButtons)return;
+    menu.dataset.adventureButtons='1';const card=menu.firstElementChild;if(!card)return;
+    const up=document.createElement('button');up.className='adventure-upgrade-btn';up.textContent=tr('👑 تطوير الشخصية','👑 Character Upgrades');up.style.cssText='display:block;width:100%;margin-top:12px;padding:12px;border:0;border-radius:14px;background:#8e44ad;color:#fff;font-size:17px;font-weight:800;cursor:pointer;';up.onclick=upgradeMenu;card.insertBefore(up,card.querySelector('.exit-btn'));
+    const ta=document.createElement('button');ta.className='adventure-time-btn';ta.textContent=tr('⏱️ تحدي السرعة','⏱️ Time Attack');ta.style.cssText='display:block;width:100%;margin-top:12px;padding:12px;border:0;border-radius:14px;background:#e67e22;color:#fff;font-size:17px;font-weight:800;cursor:pointer;';ta.onclick=()=>{state.timeAttack=true;currentLevel=1;score=0;coins=0;lives=3;gameOver=false;gameWon=false;changingLevel=false;loadLevel(1,true);menu.remove();if(settingsPanel)settingsPanel.remove();startGame();announce(tr('⏱️ تحدي السرعة بدأ!','⏱️ Time Attack started!'),1800);};card.insertBefore(ta,card.querySelector('.exit-btn'));
+  }
+
+  // Wrap stable core functions once. No duplicate game loop is introduced.
+  const oldLoad=loadLevel;
+  loadLevel=function(number,snapshotProgress=true){oldLoad(number,snapshotProgress);resetStage();};
+  const oldUpdatePlayer=updatePlayer;
+  updatePlayer=function(){
+    useKeyEdge();
+    const speedMode=state.activePower==='speed'&&now()<state.powerUntil;
+    const oldWalk=player.walkSpeed,oldRun=player.runSpeed;
+    if(speedMode){player.walkSpeed*=1.45;player.runSpeed*=1.45;}
+    const ok=oldUpdatePlayer();
+    player.walkSpeed=oldWalk;player.runSpeed=oldRun;
+    if(player.ground)state.doubleUsed=false;
+    if(!ok)state.stageDeaths++;
+    return ok;
+  };
+  const oldUpdateCoins=updateCoins;
+  updateCoins=function(){oldUpdateCoins();collectSpecials();};
+  const oldUpdateEnemies=updateEnemies;
+  updateEnemies=function(){const ok=oldUpdateEnemies();monitorKills();return ok;};
+  const oldDied=playerDied;
+  playerDied=function(reason='enemy'){const before=lives;oldDied(reason);if(lives<before)state.stageDeaths++;};
+  const oldNext=nextLevel;
+  nextLevel=function(){finalizeStage();if(state.boss&&state.boss.alive){announce(tr('👑 اهزم الزعيم أولًا!','👑 Defeat the boss first!'),1300);changingLevel=false;gameRunning=true;return;}oldNext();};
+  const oldDraw=draw;
+  draw=function(){oldDraw();drawExtras();updateUI();};
+
+  // Integrate one canonical update hook into the existing smart hooks.
+  const oldSmartE=updateSmartEnemies, oldSmartO=updateSmartObstacles;
+  updateSmartEnemies=function(){if(typeof oldSmartE==='function')oldSmartE();updateBoss();updateChase();updatePowerProjectiles();updateEvents();applyEvent();updateWeather();checkChallenge();if(state.combo&&now()>state.comboUntil)state.combo=0;};
+  updateSmartObstacles=function(){if(typeof oldSmartO==='function')oldSmartO();};
+
+  // Menu may be recreated by the existing UI, so observe it once instead of patching it repeatedly.
+  const observer=new MutationObserver(()=>addMenuButtons());observer.observe(document.body,{childList:true,subtree:true});
+  loadProfile();addUI();setTimeout(()=>{addMenuButtons();resetStage();},300);
+
+  // Achievement shortcuts / upgrade controls.
+  window.__nbAdventureUpgrade=upgradeMenu;
+  window.__nbAdventureUsePower=activatePower;
+  if(typeof window.__nbShopUse==='function'){
+    const oldShopUse=window.__nbShopUse;
+    window.__nbShopUse=function(){
+      if(state.activePower){
+        const p=state.activePower; activatePower();
+        if(p==='fire') fireball();
+        updateUI(); return;
+      }
+      return oldShopUse();
+    };
+  }
+
+  // Keyboard shortcuts that don't collide with the existing core.
+  window.addEventListener('keydown',e=>{
+    if(e.key==='u'||e.key==='U')upgradeMenu();
+  });
+})();
