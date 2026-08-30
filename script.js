@@ -2394,20 +2394,8 @@ function playerDied(reason = "enemy") {
 
   if (gameOver || gameWon || changingLevel) return;
   const now = Date.now();
-  // Active timed protection always wins over enemy/hazard damage.
-  if (typeof expansion !== "undefined" && now < Number(expansion.invincibleUntil || 0)) return;
+  // Canonical protection is handled by the adventure feature system wrapper.
   if (now < damageInvulnerableUntil) return;
-  if (typeof expansion !== "undefined") {
-    if (now < Number(expansion.invisibilityUntil || 0)) return;
-    if (Number(expansion.shield || 0) > 0) {
-      expansion.shield--;
-      expansion.activeItem = expansion.shield > 0 ? "shield" : (expansion.laserPacks > 0 ? "laser" : (expansion.flightPacks > 0 ? "flight" : (expansion.invisibilityPacks > 0 ? "invisibility" : null)));
-      damageInvulnerableUntil = Date.now() + 900;
-      if (typeof saveShopState === "function") saveShopState();
-      if (typeof updateUseButton === "function") updateUseButton();
-      updateHUD(); soundDamage(); return;
-    }
-  }
 
   // Losing a heart no longer resets/reloads the level. The player keeps
   // playing from the exact position where the hit happened.
@@ -2428,7 +2416,6 @@ function playerDied(reason = "enemy") {
 
   if (lives > 0) {
     // Keep all collected coins while the player still has hearts.
-    if (typeof saveShopState === "function") saveShopState();
     return;
   }
 
@@ -2436,7 +2423,6 @@ function playerDied(reason = "enemy") {
   // and end the attempt. The next restart begins the current level fresh.
   coins = 0;
   updateHUD();
-  if (typeof saveShopState === "function") saveShopState();
   stopGame();
   gameOver = true;
   soundGameOver();
@@ -5357,8 +5343,14 @@ function updateStartMenuTexts() {
   startMenu.querySelector('.game-title').textContent = t.title;
   startMenu.querySelector('.play-btn').textContent = t.play;
   const loadButton = startMenu.querySelector('.load-btn');
-  if (loadButton) loadButton.textContent = t.loadGame || (selectedLanguage === 'en' ? '▶ Load Game' : '▶ تحميل الحفظ');
+  if (loadButton) loadButton.textContent = '💾 ' + (selectedLanguage === 'en' ? 'Load Save' : 'تحميل الحفظ');
   startMenu.querySelector('.settings-btn').textContent = t.settings;
+  const upgradeButton = startMenu.querySelector('.adventure-upgrade-btn');
+  if (upgradeButton) upgradeButton.textContent = selectedLanguage==='en' ? '👑 Character Upgrades' : '👑 تطوير الشخصية';
+  const challengeButton = startMenu.querySelector('.adventure-challenge-btn');
+  if (challengeButton) challengeButton.textContent = selectedLanguage==='en' ? '🎯 Challenges' : '🎯 التحديات';
+  const timeButton = startMenu.querySelector('.adventure-time-btn');
+  if (timeButton) timeButton.textContent = selectedLanguage==='en' ? '⏱️ Time Attack' : '⏱️ تحدي السرعة';
   const exitButton = startMenu.querySelector('.exit-btn');
   if (exitButton) exitButton.textContent = t.exit;
   if (settingsPanel) {
@@ -5398,16 +5390,30 @@ function initStartScreen() {
     box-shadow:0 25px 70px rgba(0,0,0,.42); color:#fff;
   `;
 
+  const menuStyle = document.createElement('style');
+  menuStyle.id = 'unifiedMenuStyle';
+  menuStyle.textContent = `
+    #gameStartMenu .menu-action{display:block;width:100%;margin-top:14px;padding:16px 20px;border:0;border-radius:16px;color:#fff;font-size:22px;font-weight:900;cursor:pointer;box-shadow:0 7px 0 rgba(0,0,0,.25);transition:transform .12s,filter .12s;}
+    #gameStartMenu .menu-action:first-of-type{margin-top:0}
+    #gameStartMenu .menu-action:hover{filter:brightness(1.08);transform:translateY(-1px)}
+    #gameStartMenu .menu-action:active{transform:translateY(5px);box-shadow:0 2px 0 rgba(0,0,0,.25)}
+    #gameStartMenu .menu-green{background:#27ae60;box-shadow:0 7px 0 #176b3a}
+    #gameStartMenu .menu-blue{background:#2980b9;box-shadow:0 7px 0 #1b4f72}
+    #gameStartMenu .menu-red{background:#c0392b;box-shadow:0 7px 0 #7f241b}
+    @media(max-width:700px){#gameStartMenu>div{width:min(92vw,430px)!important;padding:24px 18px!important}#gameStartMenu .menu-action{font-size:19px;padding:14px 16px}}
+  `;
+  document.head.appendChild(menuStyle);
+
   card.innerHTML = `
     <div class="start-cap" aria-hidden="true" style="position:relative;width:92px;height:64px;margin:0 auto 6px">
       <div style="position:absolute;left:18px;top:5px;width:56px;height:42px;background:#d32f2f;border-radius:55px 55px 18px 18px;box-shadow:inset 0 -7px 0 #b71c1c"></div>
       <div style="position:absolute;left:48px;top:37px;width:48px;height:14px;background:#b71c1c;border-radius:50%;transform:rotate(7deg)"></div>
     </div>
     <h1 class="game-title" style="font-size:clamp(28px,6vw,46px);margin:12px 0 25px">${menuText[selectedLanguage].title}</h1>
-    <button class="play-btn" style="display:block;width:100%;padding:17px 20px;border:0;border-radius:16px;background:#27ae60;color:#fff;font-size:24px;font-weight:800;cursor:pointer;box-shadow:0 8px 0 #176b3a">${menuText[selectedLanguage].play}</button>
-    <button class="load-btn" style="display:block;width:100%;margin-top:18px;padding:17px 20px;border:0;border-radius:16px;background:#2980b9;color:#fff;font-size:24px;font-weight:800;cursor:pointer;box-shadow:0 8px 0 #1b4f72">▶ تحميل الحفظ</button>
-    <button class="settings-btn" style="display:block;width:100%;margin-top:18px;padding:17px 20px;border:0;border-radius:16px;background:#27ae60;color:#fff;font-size:24px;font-weight:800;cursor:pointer;box-shadow:0 8px 0 #176b3a">${menuText[selectedLanguage].settings}</button>
-    <button class="exit-btn" style="display:block;width:100%;margin-top:18px;padding:17px 20px;border:0;border-radius:16px;background:#c0392b;color:#fff;font-size:24px;font-weight:800;cursor:pointer;box-shadow:0 8px 0 #7f241b">${menuText[selectedLanguage].exit}</button>
+    <button class="play-btn menu-action menu-green">${menuText[selectedLanguage].play}</button>
+    <button class="load-btn menu-action menu-blue">💾 تحميل الحفظ</button>
+    <button class="settings-btn menu-action menu-green">${menuText[selectedLanguage].settings}</button>
+    <button class="exit-btn menu-action menu-red">${menuText[selectedLanguage].exit}</button>
     <div style="margin-top:18px;font-size:13px;opacity:.75">45 مراحل • 7 حيوانات • 3 أرواح</div>
     <div style="margin-top:8px;font-size:12px;opacity:.6">الصعوبة تبدأ من 10% وتصل إلى 70%</div>
   `;
@@ -5579,7 +5585,6 @@ setLanguage(selectedLanguage);
   let laserBolts = [];
   let lastAddonLevel = null;
   let addonMainMenuButton = null;
-  let addonFireButton = null;
 
   function languageText() {
     return selectedLanguage === "en";
@@ -5872,11 +5877,6 @@ setLanguage(selectedLanguage);
           addonMainMenuButton = null;
         }
 
-        if (addonFireButton) {
-          addonFireButton.remove();
-          addonFireButton = null;
-        }
-
         if (startMenu) {
           startMenu.remove();
           startMenu = null;
@@ -5912,73 +5912,13 @@ setLanguage(selectedLanguage);
         : "⏹ القائمة الرئيسية";
   }
 
-  function makeFireButton() {
-
-    if (addonFireButton) return;
-
-    addonFireButton =
-      document.createElement("button");
-
-    addonFireButton.id =
-      "safeLaserFireButton";
-
-    addonFireButton.style.cssText = `
-      position:fixed;
-      left:12px;
-      bottom:12px;
-      z-index:9998;
-      width:58px;
-      height:58px;
-      border:0;
-      border-radius:50%;
-      background:#8e44ad;
-      color:#fff;
-      font-size:25px;
-      cursor:pointer;
-      box-shadow:0 5px 16px rgba(0,0,0,.3);
-      display:none;
-    `;
-
-    addonFireButton.textContent = "🎒";
-
-    addonFireButton.addEventListener(
-      "pointerdown",
-      event => {
-        event.preventDefault();
-        useActiveItem();
-      }
-    );
-
-    document.body.appendChild(
-      addonFireButton
-    );
-  }
-
   function syncButtons() {
-
     if (gameRunning) {
       makeMainMenuButton();
-      makeFireButton();
-
-      if (addonFireButton) {
-        // The old laser button is replaced by the universal item-use button.
-        addonFireButton.style.display = "none";
-      }
-      if (typeof updateUseButton === "function") updateUseButton();
-
       updateMainMenuButtonText();
-
-    } else {
-
-      if (addonMainMenuButton) {
-        addonMainMenuButton.remove();
-        addonMainMenuButton = null;
-      }
-
-      if (addonFireButton) {
-        addonFireButton.remove();
-        addonFireButton = null;
-      }
+    } else if (addonMainMenuButton) {
+      addonMainMenuButton.remove();
+      addonMainMenuButton = null;
     }
   }
 
@@ -6037,685 +5977,6 @@ setLanguage(selectedLanguage);
 
   // The first level has already been loaded by the stable game.
   resetLaserForCurrentLevel();
-
-  // Keep the main-menu button available whenever gameplay is active.
-  // This only creates the existing button; it does not alter the game loop.
-  setInterval(() => {
-    if (gameRunning) {
-      makeMainMenuButton();
-      updateMainMenuButtonText();
-    }
-  }, 120);
-
-})();
-
-
-/* ============================================================
-   EXPANSION PACK — Power-ups, Bosses, Secrets, Stars, Timer,
-   Save/Continue, Bonus Shop and Stage Challenges
-   This layer is intentionally isolated from the original core.
-   ============================================================ */
-(function installExpansionPack() {
-  if (window.__NaughtyExpansionInstalled) return;
-  window.__NaughtyExpansionInstalled = true;
-
-  const SAVE_KEY = "naughtyBoySaveV3";
-  const shop = {
-    shield: 25,
-    laser: 30,
-    flight: 35,
-    invisibility: 45
-  };
-
-  let lastCompletionSavedLevel = 0;
-
-  let expansion = {
-    stageStars: 0,
-    stageCoinsStart: 0,
-    stageStartTime: 0,
-    bonusCoins: 0,
-    shield: 0,
-    laserPacks: 0,
-    flightPacks: 0,
-    invisibilityPacks: 0,
-    activeItem: null,
-    activeTimedType: null,
-    invincibleUntil: 0,
-    invisibilityUntil: 0,
-    flightUntil: 0,
-    flightAltitude: 270,
-    speedUntil: 0,
-    jumpUntil: 0,
-    powerUp: null,
-    secret: null,
-    boss: null,
-    bossDefeated: false,
-    timerVisible: true
-  };
-
-  function lang() {
-    return (typeof selectedLanguage !== "undefined" && selectedLanguage === "en") ? "en" : "ar";
-  }
-
-  function t(ar, en) {
-    return lang() === "en" ? en : ar;
-  }
-
-  function getStage() {
-    return Math.max(1, Math.min(45, Number(
-      typeof currentLevel !== "undefined" ? currentLevel : 1
-    ) || 1));
-  }
-
-  function getScore() {
-    return Number(typeof score !== "undefined" ? score : 0) || 0;
-  }
-
-  function getCoins() {
-    return Number(typeof coins !== "undefined" ? coins : 0) || 0;
-  }
-
-  function saveProgress() {
-    try {
-      const old = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}");
-      const data = {
-        level: Math.max(old.level || 1, getStage()),
-        completedLevel: Math.max(old.completedLevel || 0, getStage()),
-        coins: getCoins(),
-        score: getScore(),
-        shield: expansion.shield,
-        bonusCoins: expansion.bonusCoins,
-        stars: old.stars || {}
-      };
-      data.stars[getStage()] = Math.max(
-        Number(data.stars[getStage()] || 0),
-        expansion.stageStars
-      );
-      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-    } catch (_) {}
-  }
-
-  function loadProgress() {
-    try {
-      const data = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}");
-      if (data && typeof data === "object") {
-        expansion.shield = Number(data.shield || 0);
-        expansion.bonusCoins = Number(data.bonusCoins || 0);
-        return data;
-      }
-    } catch (_) {}
-    return {};
-  }
-
-  function stageDifficulty() {
-    return 0.10 + ((getStage() - 1) / Math.max(1, TOTAL_LEVELS - 1)) * 0.60;
-  }
-
-  function announce(text) {
-    const old = document.getElementById("expansionToast");
-    if (old) old.remove();
-
-    const el = document.createElement("div");
-    el.id = "expansionToast";
-    el.textContent = text;
-    el.style.cssText = `
-      position:fixed;left:50%;top:18%;transform:translateX(-50%);
-      z-index:10001;background:rgba(15,20,30,.92);color:white;
-      padding:12px 18px;border-radius:14px;font-weight:800;
-      box-shadow:0 8px 30px rgba(0,0,0,.35);text-align:center;
-      pointer-events:none;
-    `;
-    document.body.appendChild(el);
-    setTimeout(() => el.remove(), 1800);
-  }
-
-  function addStyle() {
-    if (document.getElementById("expansionStyle")) return;
-    const style = document.createElement("style");
-    style.id = "expansionStyle";
-    style.textContent = `
-      #score{display:none!important;}
-      #laserControl{display:none!important;}
-      #expansionHud {
-        position:fixed;left:12px;top:112px;z-index:9998;
-        display:flex;gap:7px;flex-wrap:wrap;max-width:48%;
-        font:700 13px system-ui,sans-serif;pointer-events:none;
-      }
-      #expansionHud span {
-        background:rgba(15,20,30,.78);color:#fff;
-        padding:6px 9px;border-radius:10px;
-        box-shadow:0 3px 12px rgba(0,0,0,.22);
-      }
-      #expansionShop {
-        position:fixed;inset:0;z-index:10003;
-        display:none;align-items:center;justify-content:center;
-        background:rgba(0,0,0,.65);padding:20px;
-      }
-      #expansionShop .box {
-        width:min(430px,92vw);background:#fff;border-radius:20px;
-        padding:20px;text-align:center;box-shadow:0 20px 70px rgba(0,0,0,.4);
-      }
-      #expansionShop button {
-        width:100%;margin:6px 0;padding:11px;border:0;border-radius:12px;
-        font-weight:800;cursor:pointer;
-      }
-      #nbStoreButton, #nbUseButton {
-        position:fixed;top:12px;z-index:10002;width:50px;height:50px;border:0;border-radius:15px;
-        background:linear-gradient(145deg,rgba(20,28,38,.96),rgba(5,10,16,.94));color:#fff;
-        font-size:24px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.30);
-        border:1px solid rgba(255,255,255,.16);transition:transform .15s ease,filter .15s ease;
-      }
-      #nbStoreButton:hover, #nbUseButton:hover { transform:translateY(-1px) scale(1.04); filter:brightness(1.12); }
-      #nbStoreButton { right:72px; }
-      #nbUseButton { right:128px; display:none; }
-      @media (max-width:700px) and (pointer:coarse){
-        #nbStoreButton, #nbUseButton { display:none !important; }
-      }
-      #nbPowerTimer {
-        position:fixed; z-index:10002; display:none; min-width:86px; height:34px;
-        padding:6px 10px; border-radius:12px; background:rgba(15,20,30,.92); color:#fff;
-        font:900 14px system-ui,sans-serif; text-align:center; box-shadow:0 5px 16px rgba(0,0,0,.25);
-        border:1px solid rgba(255,255,255,.15); pointer-events:none;
-      }
-      #expansionShop .box { font-family:system-ui,Segoe UI,Arial,sans-serif; }
-      #expansionShop h2 { font-size:28px; margin:2px 0 8px; font-weight:900; }
-      #expansionShop p { font-size:16px; font-weight:800; margin:0 0 12px; }
-      #expansionShop button[data-buy] {
-        background:linear-gradient(135deg,#f7f9fc,#e8eef7); color:#18202a;
-        border:1px solid #d5dce6; font-size:16px; min-height:48px; text-align:right; padding:12px 15px;
-      }
-      #expansionShop button[data-buy]:hover { filter:brightness(.97); transform:translateY(-1px); }
-      #expansionShop button[data-close] { background:#263238; color:#fff; font-size:16px; }
-      @media(max-width:700px){ #nbStoreButton{right:68px} #nbUseButton{right:122px} #nbPowerTimer{right:178px;bottom:86px;top:auto} }
-      @media(min-width:701px){ #nbPowerTimer{right:188px;bottom:88px;top:auto} }
-      .expansionTouch {
-        position:fixed;bottom:70px;z-index:9999;border:0;border-radius:50%;
-        width:48px;height:48px;font-size:20px;background:rgba(20,25,35,.82);
-        color:#fff;display:none;
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  function addHud() {
-    if (document.getElementById("expansionHud")) return;
-    const hud = document.createElement("div");
-    hud.id = "expansionHud";
-    hud.innerHTML = ``;
-    document.body.appendChild(hud);
-  }
-
-  function getWallet() { return getCoins(); }
-
-  function saveShopState() {
-    try {
-      const data = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}");
-      data.shopInventory = { shield: expansion.shield, laser: expansion.laserPacks, laserShots: Number(typeof laserShots !== 'undefined' ? laserShots : 0), flight: expansion.flightPacks, invisibility: expansion.invisibilityPacks };
-      data.shopActive = expansion.activeItem;
-      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-    } catch (_) {}
-  }
-
-  function loadShopState() {
-    try {
-      const data = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}");
-      const inv = data.shopInventory || {};
-      expansion.shield = Number(inv.shield || data.shield || 0);
-      expansion.laserPacks = Number(inv.laser || 0);
-      if (typeof laserShots !== 'undefined') laserShots = Number(inv.laserShots || 0);
-      expansion.flightPacks = Number(inv.flight || inv.star || 0);
-      expansion.invisibilityPacks = Number(inv.invisibility || 0);
-      expansion.activeItem = data.shopActive || null;
-    } catch (_) {}
-  }
-
-  function ensureTopButtons() {
-    if (!document.getElementById('nbStoreButton')) {
-      const b = document.createElement('button'); b.id='nbStoreButton'; b.type='button'; b.textContent='🛒'; b.title=t('المتجر','Shop');
-      b.onclick=()=>{ try{initAudio();}catch(_){} openShop(); }; document.body.appendChild(b);
-    }
-    if (!document.getElementById('nbUseButton')) {
-      const b = document.createElement('button'); b.id='nbUseButton'; b.type='button'; b.title=t('استخدام العنصر','Use item');
-      b.onclick=(ev)=>{ev.preventDefault();ev.stopPropagation();useActiveItem();}; b.addEventListener('pointerdown',(ev)=>{ev.preventDefault();ev.stopPropagation();}); document.body.appendChild(b);
-    }
-    if (!document.getElementById('nbPowerTimer')) {
-      const timer = document.createElement('div'); timer.id='nbPowerTimer'; timer.setAttribute('aria-live','polite');
-      document.body.appendChild(timer);
-    }
-    updateUseButton(); updatePowerTimer();
-  }
-
-  function updateUseButton() {
-    const b=document.getElementById('nbUseButton'); if(!b) return;
-    const icons={shield:'🛡️',laser:'🔫',flight:'✈️',invisibility:'👻'};
-    const counts={
-      shield: expansion.shield,
-      laser: Math.max(Number(expansion.laserPacks || 0), Number(typeof laserShots !== 'undefined' ? laserShots : 0)),
-      flight: expansion.flightPacks,
-      invisibility: expansion.invisibilityPacks
-    };
-    const active=expansion.activeItem && counts[expansion.activeItem]>0 ? expansion.activeItem : null;
-    b.style.display=(typeof gameRunning!=='undefined' && gameRunning && active)?'block':'none';
-    b.textContent=active?icons[active]:'🎒';
-    b.title=active?t('استخدام العنصر','Use item'):t('لا يوجد عنصر','No item');
-    b.setAttribute('aria-label', active ? t('استخدام العنصر','Use item') : t('لا يوجد عنصر','No item'));
-  }
-
-  function updatePowerTimer() {
-    const el=document.getElementById('nbPowerTimer');
-    if(!el) return;
-    const now=Date.now();
-    let until=0, icon='', label='';
-    if(now < Number(expansion.invisibilityUntil||0)) { until=Number(expansion.invisibilityUntil); icon='👻'; label=t('اختفاء','Invisible'); }
-    else if(now < Number(expansion.flightUntil||0)) { until=Number(expansion.flightUntil); icon='✈️'; label=t('طيران','Flight'); }
-    else if(now < Number(expansion.invincibleUntil||0)) { until=Number(expansion.invincibleUntil); icon='🛡️'; label=t('درع','Shield'); }
-    if(until>now) {
-      const sec=Math.ceil((until-now)/1000);
-      el.textContent=icon+' '+sec+'s';
-      el.title=label; el.style.display='block';
-    } else { el.style.display='none'; expansion.activeTimedType=null; }
-  }
-
-  function useActiveItem() {
-    const type=expansion.activeItem;
-    if(!type) return;
-
-    if(type==='laser'){
-      // Use the real laser engine from the original laser add-on.
-      // A pack is converted into 5 real shots only when the current magazine is empty.
-      if (!gameRunning || gameOver || gameWon) return;
-      let shots = typeof window.__shopLaserGetShots === 'function'
-        ? window.__shopLaserGetShots() : 0;
-      if (shots <= 0 && Number(expansion.laserPacks || 0) > 0) {
-        expansion.laserPacks--;
-        shots = typeof window.__shopLaserAddShots === 'function'
-          ? window.__shopLaserAddShots(5) : 0;
-      }
-      if (shots <= 0) {
-        expansion.activeItem = null;
-        updateUseButton();
-        saveShopState();
-        return;
-      }
-      if (typeof window.__shopLaserFire === 'function') {
-        window.__shopLaserFire();
-      }
-      shots = typeof window.__shopLaserGetShots === 'function'
-        ? window.__shopLaserGetShots() : 0;
-      if (shots <= 0 && Number(expansion.laserPacks || 0) <= 0) expansion.activeItem = null;
-      saveShopState();
-      updateUseButton();
-      return;
-    }
-
-    const count=type==='shield'?expansion.shield:type==='flight'?expansion.flightPacks:expansion.invisibilityPacks;
-    if(count<=0){ expansion.activeItem=null; updateUseButton(); return; }
-
-    if(type==='shield'){
-      // One purchased shield activates full protection for 10 seconds.
-      // It is consumed on activation, not on the first enemy hit.
-      expansion.invincibleUntil=Date.now()+10000;
-      expansion.activeTimedType='shield';
-      expansion.shield--;
-    }
-    if(type==='flight'){
-      expansion.flightUntil=Date.now()+10000;
-      expansion.activeTimedType='flight';
-      expansion.flightPacks--;
-      expansion.flightAltitude=270;
-    }
-    if(type==='invisibility'){
-      expansion.invisibilityUntil=Date.now()+5000;
-      expansion.activeTimedType='invisibility';
-      expansion.invisibilityPacks--;
-    }
-
-    if((type==='shield'&&expansion.shield<=0)||(type==='flight'&&expansion.flightPacks<=0)||(type==='invisibility'&&expansion.invisibilityPacks<=0)) expansion.activeItem=null;
-    saveShopState();
-    updateUseButton();
-    updatePowerTimer();
-    announce(type==='flight' ? t('✈️ الطيران مفعل لمدة 10 ثوانٍ!','✈️ Flight active for 10 seconds!') : t('تم استخدام العنصر!','Item used!'));
-  }
-
-  function addShop() {
-    if (document.getElementById("expansionShop")) return;
-    ensureTopButtons();
-    const wrap = document.createElement("div");
-    wrap.id = "expansionShop";
-    wrap.innerHTML = `
-      <div class="box">
-        <h2 id="shopTitle"></h2>
-        <p id="shopCoins"></p>
-        <button data-buy="shield"></button>
-        <button data-buy="laser"></button>
-        <button data-buy="flight"></button>
-        <button data-buy="invisibility"></button>
-        <button data-close></button>
-      </div>`;
-    document.body.appendChild(wrap);
-    wrap.querySelector("[data-close]").onclick = () => wrap.style.display = "none";
-    wrap.querySelectorAll("[data-buy]").forEach(btn => {
-      btn.onclick = () => {
-        const type=btn.dataset.buy, cost=shop[type];
-        if(getWallet()<cost){ announce(t("العملات غير كافية","Not enough coins")); return; }
-        coins-=cost;
-        if(type==='shield') expansion.shield++;
-        if(type==='laser') {
-          expansion.laserPacks++;
-          if (typeof window.__shopLaserAddShots === 'function') window.__shopLaserAddShots(5);
-        }
-        if(type==='flight') expansion.flightPacks++;
-        if(type==='invisibility') expansion.invisibilityPacks++;
-        expansion.activeItem=type;
-        updateHUD(); saveShopState(); updateShopText(); updateUseButton();
-        announce(t("تم الشراء! اضغط زر الاستخدام 🛒","Purchased! Press the use button."));
-      };
-    });
-    updateShopText();
-  }
-
-  function updateShopText() {
-    const box=document.getElementById("expansionShop"); if(!box) return;
-    box.querySelector("#shopTitle").textContent=t("🛒 المتجر","🛒 Shop");
-    box.querySelector("#shopCoins").textContent=t(`عملاتك: ${getWallet()}`,`Your coins: ${getWallet()}`);
-    const labels={
-      shield:t("🛡️ درع 10 ثوانٍ — 25 عملة","🛡️ Shield 10s — 25 coins"),
-      laser:t("🔫 5 طلقات ليزر — 30 عملة","🔫 5 Laser shots — 30 coins"),
-      flight:t("✈️ طيران 10 ثوانٍ — 35 عملة","✈️ Flight 10s — 35 coins"),
-      invisibility:t("👻 اختفاء 5 ثوانٍ — 45 عملة","👻 Invisibility 5s — 45 coins")
-    };
-    box.querySelectorAll("[data-buy]").forEach(b=>b.textContent=labels[b.dataset.buy]);
-    box.querySelector("[data-close]").textContent=t("إغلاق","Close");
-  }
-
-  function openShop() {
-    addShop();
-    updateShopText();
-    document.getElementById("expansionShop").style.display = "flex";
-  }
-
-  function updateHud() {
-    addHud();
-    const stage = getStage();
-    const elapsed = Math.max(0, (Date.now() - expansion.stageStartTime) / 1000);
-    const remaining = Math.max(0, 30 - elapsed);
-    const min = Math.floor(remaining / 60);
-    const sec = Math.floor(remaining % 60);
-    updateUseButton();
-    updatePowerTimer();
-  }
-
-  function resetStageExtras() {
-    expansion.stageCoinsStart = getCoins();
-    expansion.stageStartTime = Date.now();
-    expansion.stageStars = 0;
-    expansion.invincibleUntil = 0;
-    expansion.invisibilityUntil = 0;
-    expansion.flightUntil = 0;
-    expansion.flightAltitude = 270;
-    expansion.activeTimedType = null;
-    expansion.speedUntil = 0;
-    expansion.jumpUntil = 0;
-    expansion.bossDefeated = false;
-
-    const width = Number(typeof currentLevelWidth !== "undefined" ? currentLevelWidth : 81000) || 81000;
-    expansion.powerUp = {
-      type: getStage() % 4 === 0 ? "flight" :
-            getStage() % 3 === 0 ? "shield" :
-            getStage() % 2 === 0 ? "speed" : "jump",
-      x: Math.floor(width * 0.48),
-      y: 480,
-      collected: false
-    };
-
-    expansion.secret = {
-      x: Math.floor(width * 0.66),
-      y: 0,
-      found: false
-    };
-
-    // Bosses on every fifth stage.
-    expansion.boss = [5,10,15,20,25,30,35,40,45].includes(getStage()) ? {
-      x: Math.floor(width * 0.91),
-      y: 430,
-      w: 95,
-      h: 120,
-      hp: getStage() === 45 ? 12 : 7,
-      maxHp: getStage() === 45 ? 12 : 7,
-      active: true
-    } : null;
-
-    updateHud();
-  }
-
-  function drawExtras() {
-    if (typeof ctx === "undefined" || typeof cameraX === "undefined") return;
-
-    const p = expansion.powerUp;
-    if (p && !p.collected) {
-      const x = p.x - cameraX, y = p.y;
-      ctx.save();
-      ctx.font = "28px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText(
-        p.type === "flight" ? "✈️" :
-        p.type === "shield" ? "🛡️" :
-        p.type === "speed" ? "⚡" : "🦘",
-        x, y
-      );
-      ctx.restore();
-    }
-
-    if (Date.now() < Number(expansion.flightUntil || 0) && typeof player !== "undefined") {
-      const altitude = Number(expansion.flightAltitude || 270);
-      if (player.y > altitude) player.y = altitude;
-      player.vy = 0;
-      player.ground = false;
-    }
-
-    const s = expansion.secret;
-    if (s && !s.found) {
-      const x = s.x - cameraX;
-      ctx.save();
-      ctx.font = "25px sans-serif";
-      ctx.fillText("❓", x, 230);
-      ctx.restore();
-    }
-
-    if (Date.now() < Number(expansion.flightUntil || 0) && typeof player !== "undefined") {
-      ctx.save();
-      ctx.font = "42px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("✈️", (player.x - cameraX) + player.width/2, player.y + player.height + 18);
-      ctx.restore();
-    }
-
-    if (Date.now() < (expansion.invisibilityUntil || 0)) {
-      ctx.save(); ctx.globalAlpha=0.28; ctx.fillStyle='#b8eaff';
-      ctx.beginPath(); ctx.arc((player.x-cameraX)+player.width/2, player.y+player.height/2, 30, 0, Math.PI*2); ctx.fill(); ctx.restore();
-    }
-
-    const b = expansion.boss;
-    if (b && b.active) {
-      const x = b.x - cameraX;
-      ctx.save();
-      ctx.font = "70px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText(getStage() === 45 ? "👹" : "🐲", x + b.w/2, b.y + 75);
-      ctx.fillStyle = "#222";
-      ctx.fillRect(x, b.y - 16, b.w, 8);
-      ctx.fillStyle = "#e53935";
-      ctx.fillRect(x, b.y - 16, b.w * (b.hp / b.maxHp), 8);
-      ctx.restore();
-    }
-  }
-
-  function updateExtras() {
-    if (typeof gameRunning !== "undefined" && !gameRunning) return;
-
-    updateHud();
-
-    const p = expansion.powerUp;
-    if (p && !p.collected && typeof player !== "undefined") {
-      if (Math.abs((player.x + player.width/2) - p.x) < 42 &&
-          Math.abs((player.y + player.height/2) - p.y) < 60) {
-        p.collected = true;
-        if (p.type === "flight") { expansion.flightUntil = Date.now() + 10000; expansion.activeTimedType = "flight"; expansion.flightAltitude = 270; }
-        if (p.type === "shield") expansion.shield++;
-        if (p.type === "speed") expansion.speedUntil = Date.now() + 15000;
-        if (p.type === "jump") expansion.jumpUntil = Date.now() + 15000;
-        expansion.stageStars = Math.max(expansion.stageStars, 1);
-        announce(
-          p.type === "flight" ? t("✈️ حصلت على الطيران!", "✈️ Flight acquired!") :
-          p.type === "shield" ? t("🛡️ حصلت على درع!", "🛡️ Shield acquired!") :
-          p.type === "speed" ? t("⚡ سرعة إضافية!", "⚡ Speed boost!") :
-          t("🦘 قفزة عالية!", "🦘 High jump!")
-        );
-      }
-    }
-
-    const s = expansion.secret;
-    if (s && !s.found && typeof player !== "undefined") {
-      if (Math.abs((player.x + player.width/2) - s.x) < 50 &&
-          player.y < 300) {
-        s.found = true;
-        expansion.stageStars = Math.max(expansion.stageStars, 2);
-        expansion.bonusCoins += 10;
-        announce(t("💎 منطقة سرية! +10 عملات", "💎 Secret area! +10 coins"));
-      }
-    }
-
-    if (Date.now() < (expansion.invisibilityUntil || 0)) {
-      ctx.save(); ctx.globalAlpha=0.28; ctx.fillStyle='#b8eaff';
-      ctx.beginPath(); ctx.arc((player.x-cameraX)+player.width/2, player.y+player.height/2, 30, 0, Math.PI*2); ctx.fill(); ctx.restore();
-    }
-
-    const b = expansion.boss;
-    if (b && b.active && typeof player !== "undefined") {
-      const near = Math.abs((player.x + player.width/2) - (b.x + b.w/2)) < 300;
-      if (near && typeof laserBolts !== "undefined") {
-        for (let i = laserBolts.length - 1; i >= 0; i--) {
-          const bolt = laserBolts[i];
-          if (bolt.x < b.x + b.w && bolt.x + (bolt.width || 0) > b.x &&
-              bolt.y < b.y + b.h && bolt.y + (bolt.height || 0) > b.y) {
-            b.hp--;
-            laserBolts.splice(i, 1);
-            if (b.hp <= 0) {
-              b.active = false;
-              b.active = false;
-              expansion.bossDefeated = true;
-              expansion.stageStars = 3;
-              expansion.bonusCoins += 25;
-              announce(t("🏆 هزمت الزعيم! +25 عملة", "🏆 Boss defeated! +25 coins"));
-            }
-          }
-        }
-      }
-    }
-
-    // Award stage stars based on clean completion conditions.
-    if (typeof levelComplete !== "undefined" && levelComplete && lastCompletionSavedLevel !== getStage()) {
-      const elapsed = (Date.now() - expansion.stageStartTime) / 1000;
-      if (elapsed <= 30) expansion.stageStars = Math.max(expansion.stageStars, 1);
-      if (getCoins() - expansion.stageCoinsStart >= 20) expansion.stageStars = Math.max(expansion.stageStars, 2);
-      if (expansion.boss && expansion.bossDefeated) expansion.stageStars = 3;
-      saveProgress();
-      lastCompletionSavedLevel = getStage();
-    }
-  }
-
-  // Save a little extra currency for the shop without altering the original coin counter.
-  function syncShopCoins() {
-    try {
-      const data = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}");
-      data.shopCoins = Number(data.shopCoins || 0) + expansion.bonusCoins;
-      expansion.bonusCoins = 0;
-      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-    } catch (_) {}
-  }
-
-  // Damage protection: only intercept if the core exposes a common damage function.
-  const damageNames = ["hurtPlayer", "takeDamage", "damagePlayer", "hitPlayer"];
-  damageNames.forEach(name => {
-    if (typeof window[name] === "function" && !window[name].__expWrapped) {
-      const original = window[name];
-      const wrapped = function(...args) {
-        // Timed protection is authoritative: do not forward damage at all.
-        if (Date.now() < Number(expansion.invincibleUntil || 0) ||
-            Date.now() < Number(expansion.invisibilityUntil || 0)) return;
-        return original.apply(this, args);
-      };
-      wrapped.__expWrapped = true;
-      window[name] = wrapped;
-    }
-  });
-
-  // Input: P opens the shop. E uses the currently selected item.
-  document.addEventListener("keydown", e => {
-    if (e.key === "p" || e.key === "P") { if (typeof gameRunning !== 'undefined' && gameRunning) openShop(); }
-    if (e.key === "e" || e.key === "E") useActiveItem();
-    if (e.key === "Escape") { const sh=document.getElementById("expansionShop"); if(sh) sh.style.display="none"; }
-  });
-
-  // Lightweight wrappers around level loading and drawing.
-  const originalLoadLevel = typeof window.loadLevel === "function" ? window.loadLevel : null;
-  if (originalLoadLevel && !originalLoadLevel.__expWrapped) {
-    const wrappedLoad = function(...args) {
-      const result = originalLoadLevel.apply(this, args);
-      resetStageExtras();
-      return result;
-    };
-    wrappedLoad.__expWrapped = true;
-    window.loadLevel = wrappedLoad;
-  }
-
-  const originalDraw = typeof window.draw === "function" ? window.draw : null;
-  if (originalDraw && !originalDraw.__expWrapped) {
-    const wrappedDraw = function(...args) {
-      const result = originalDraw.apply(this, args);
-      drawExtras();
-      return result;
-    };
-    wrappedDraw.__expWrapped = true;
-    window.draw = wrappedDraw;
-  }
-
-  addStyle();
-  addHud();
-  addShop();
-  loadProgress();
-  loadShopState();
-  ensureTopButtons();
-
-  // Keep the use button and active-power timer responsive independently of the
-  // game's render loop. This also guarantees the countdown remains visible.
-  setInterval(() => {
-    if (typeof gameRunning !== 'undefined' && gameRunning) {
-      updateUseButton();
-      updatePowerTimer();
-    }
-  }, 100);
-
-  // Start extras after the original game has initialized.
-  setTimeout(() => {
-    resetStageExtras();
-    updateShopText();
-    updateUseButton();
-    updatePowerTimer();
-  }, 250);
-  // Public bridges for mobile/desktop controls. These keep the expansion
-  // inventory private while allowing the touch UI to invoke it safely.
-  window.__nbShopOpen = openShop;
-  window.__nbShopUse = useActiveItem;
-  window.__nbShopGetActive = function(){
-    const type = expansion.activeItem;
-    if(!type) return null;
-    const has = type==='shield' ? expansion.shield>0 :
-                type==='laser' ? (expansion.laserPacks>0 || (typeof window.__shopLaserGetShots==='function' && window.__shopLaserGetShots()>0)) :
-                type==='flight' ? expansion.flightPacks>0 :
-                type==='invisibility' ? expansion.invisibilityPacks>0 : false;
-    return has ? type : null;
-  };
 
 })();
 
@@ -7823,10 +7084,10 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
       }
       #nbTouchLeft{left:max(14px,env(safe-area-inset-left));bottom:max(18px,calc(18px + env(safe-area-inset-bottom)));}
       #nbTouchRight{left:88px;bottom:max(18px,calc(18px + env(safe-area-inset-bottom)));}
-      #nbTouchRun{right:88px;bottom:max(18px,calc(18px + env(safe-area-inset-bottom)));}
-      #nbTouchUse{right:14px;bottom:max(18px,calc(18px + env(safe-area-inset-bottom)));}
-      #nbTouchStore{right:160px;bottom:max(18px,calc(18px + env(safe-area-inset-bottom)));}
-      #nbTouchJump{right:14px;bottom:max(92px,calc(92px + env(safe-area-inset-bottom)));}
+      #nbTouchRun{right:236px;bottom:max(18px,calc(18px + env(safe-area-inset-bottom)));}
+      #nbTouchStore{right:162px;bottom:max(18px,calc(18px + env(safe-area-inset-bottom)));}
+      #nbTouchUse{right:14px;bottom:max(92px,calc(92px + env(safe-area-inset-bottom)));}
+      #nbTouchJump{right:88px;bottom:max(92px,calc(92px + env(safe-area-inset-bottom)));}
       #nbTouchFire{display:none !important;}
       @media (min-width: 900px) and (pointer: coarse){
         .nb-touch-btn{width:70px;height:70px;}
@@ -8009,10 +7270,12 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
     gold: [], gems: [], boxes: [], powerups: [], projectiles: [],
     boss: null, chase: null, event: null, secret: null, weather: 'clear',
     activePower: null, powerUntil: 0, doubleUsed: false, jumpWasDown: false,
-    challenge: null, completed: false, stageDeaths: 0, rareCount: 0,
+    challenge: null, challengeEnabled: false, challengeChoice: null, completed: false, stageDeaths: 0, rareCount: 0,
     timeAttack: false, timeAttackBest: {}, achievements: {}, upgrades: {
       speed: 0, jump: 0, health: 0, laser: 0, shield: 0
     },
+    shop: {shield:0, laser:0, flight:0, invisibility:0, fire:0, speed:0, double:0, magnet:0, ghost:0},
+    shopActive: null, shopTimedUntil: 0,
     nextEventAt: 0, bannerUntil: 0, banner: '', eventSeed: 0
   };
 
@@ -8029,12 +7292,12 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
       if(d && typeof d==='object'){
         if(d.upgrades) state.upgrades={...state.upgrades,...d.upgrades};
         state.achievements=d.achievements||{};
-        state.timeAttackBest=d.timeAttackBest||{};
+        state.timeAttackBest=d.timeAttackBest||{}; state.challengeEnabled=!!d.challengeEnabled; state.challengeChoice=d.challengeChoice||null; if(d.shop) state.shop={...state.shop,...d.shop}; state.shopActive=d.shopActive||null;
       }
     }catch(_){ }
   }
   function saveProfile(){
-    try{localStorage.setItem(SAVE_KEY,JSON.stringify({upgrades:state.upgrades,achievements:state.achievements,timeAttackBest:state.timeAttackBest}));}catch(_){ }
+    try{localStorage.setItem(SAVE_KEY,JSON.stringify({upgrades:state.upgrades,achievements:state.achievements,timeAttackBest:state.timeAttackBest,shop:state.shop,shopActive:state.shopActive,challengeEnabled:state.challengeEnabled,challengeChoice:state.challengeChoice}));}catch(_){ }
   }
 
   function announce(text, ms=1900){
@@ -8062,14 +7325,20 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
       #adventureChallenge b{display:block;font-size:14px;margin-bottom:4px}
       #adventurePowerPanel{position:fixed;right:12px;bottom:14px;z-index:10020;display:none;padding:8px 10px;border-radius:12px;background:rgba(9,16,26,.84);color:#fff;font:800 12px system-ui,sans-serif;pointer-events:none}
       @media(max-width:700px){#adventureHUD{left:8px;right:8px;bottom:88px;max-width:calc(100vw - 16px)}#adventureChallenge{top:145px;right:8px;min-width:160px;max-width:45vw;font-size:10px}#adventureBanner{top:19%;font-size:15px}}
+      .adventure-menu-btn{display:block;width:100%;margin-top:12px;padding:12px 16px;border:0;border-radius:14px;background:#27ae60;color:#fff;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 6px 0 #176b3a}
+      #adventureChallengeMenu{position:fixed;inset:0;z-index:10070;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.66);padding:16px;font-family:system-ui,sans-serif}
+      #adventureChallengeMenu .challenge-box{width:min(94vw,520px);max-height:90vh;overflow:auto;background:#14202b;color:#fff;border-radius:22px;padding:20px;text-align:center;box-shadow:0 22px 70px rgba(0,0,0,.5)}
+      #adventureChallengeMenu button.challenge-option{display:block;width:100%;margin:8px 0;padding:13px;border:0;border-radius:13px;background:#27ae60;color:#fff;font-weight:900;cursor:pointer}
     `;
     document.head.appendChild(st);
   }
   function addUI(){
     addStyle();
-    for(const id of ['adventureHUD','adventureChallenge','adventurePowerPanel','adventureBanner']){
-      if(!document.getElementById(id)) document.body.insertAdjacentHTML('beforeend', id==='adventureHUD'?`<div id="adventureHUD"><span id="advCombo">🔥 ×0</span><span id="advGems">💎 0</span><span id="advTime">⏱️ 0:00</span><span id="advPower">🎒 —</span><span id="advWeather">☀️</span></div>`:id==='adventureChallenge'?`<div id="adventureChallenge"><b id="advChallengeTitle">🎯 Challenge</b><div id="advChallengeText"></div></div>`:id==='adventurePowerPanel'?`<div id="adventurePowerPanel">Q: <b id="advPowerUse">—</b></div>`:'');
-    }
+    if(!document.getElementById('adventureHUD')) document.body.insertAdjacentHTML('beforeend',`<div id="adventureHUD"><span id="advCombo">🔥 ×0</span><span id="advGems">💎 0</span><span id="advTime">⏱️ 0:00</span><span id="advPower">🎒 —</span><span id="advWeather">☀️</span></div>`);
+    if(!document.getElementById('adventureChallenge')) document.body.insertAdjacentHTML('beforeend',`<div id="adventureChallenge"><b id="advChallengeTitle">🎯 Challenge</b><div id="advChallengeText"></div></div>`);
+    if(!document.getElementById('adventurePowerPanel')) document.body.insertAdjacentHTML('beforeend',`<div id="adventurePowerPanel">Q: <b id="advPowerUse">—</b></div>`);
+    if(!document.getElementById('adventureBanner')) document.body.insertAdjacentHTML('beforeend',`<div id="adventureBanner"></div>`);
+    addShopStyle(); ensureUseButton();
   }
 
   function applyUpgrades(){
@@ -8082,12 +7351,13 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
   }
 
   function stageChallenge(){
+    if(!state.challengeEnabled) return null;
     const d=diff(), targetKills=Math.max(3,Math.floor(4+d*9));
     const targetCoins=Math.max(8,Math.floor(coinList.length*(0.28+d*0.18)));
-    const kind=currentLevel%4;
-    if(kind===0) return {kind:'coins',target:targetCoins,done:0,label:tr('جمع العملات','Collect coins')};
-    if(kind===1) return {kind:'kills',target:targetKills,done:0,label:tr('اهزم الأعداء','Defeat enemies')};
-    if(kind===2) return {kind:'time',target:Math.max(65,185-currentLevel*2),done:0,label:tr('الإنهاء بسرعة','Finish quickly')};
+    const selected=state.challengeChoice || (currentLevel%4===0?'coins':currentLevel%4===1?'kills':currentLevel%4===2?'time':'safe');
+    if(selected==='coins') return {kind:'coins',target:targetCoins,done:0,label:tr('جمع العملات','Collect coins')};
+    if(selected==='kills') return {kind:'kills',target:targetKills,done:0,label:tr('اهزم الأعداء','Defeat enemies')};
+    if(selected==='time') return {kind:'time',target:Math.max(65,185-currentLevel*2),done:0,label:tr('الإنهاء بسرعة','Finish quickly')};
     return {kind:'safe',target:0,done:0,label:tr('بدون ضرر','No damage')};
   }
 
@@ -8311,14 +7581,15 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
   }
 
   function updateUI(){
+    ensureUseButton();
     const active=!!(gameRunning&&!gameOver&&!gameWon);
     const hud=document.getElementById('adventureHUD'); if(hud)hud.style.display=active?'flex':'none';
-    const ch=document.getElementById('adventureChallenge'); if(ch)ch.style.display=active?'block':'none';
+    const ch=document.getElementById('adventureChallenge'); if(ch)ch.style.display=(active&&state.challengeEnabled&&state.challenge)?'block':'none';
     const pp=document.getElementById('adventurePowerPanel'); if(pp)pp.style.display=active?'block':'none';
     const elapsed=state.startTime?((now()-state.startTime)/1000):0;
     const combo=state.combo>0&&now()<state.comboUntil?state.combo:0;
     const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
-    set('advCombo',`🔥 ×${combo}`);set('advGems',`💎 ${state.gems.filter(x=>x.collected).length}`);set('advTime',`⏱️ ${formatTime(elapsed)}`);set('advPower',state.activePower?`🎒 ${state.activePower} ${Math.max(0,Math.ceil((state.powerUntil-now())/1000))}s`:'🎒 —');
+    set('advCombo',`🔥 ×${combo}`);set('advGems',`💎 ${state.gems.filter(x=>x.collected).length}`);set('advTime',`⏱️ ${formatTime(elapsed)}`);set('advPower',state.activePower?`🎒 ${powerLabel(state.activePower)} ${Math.max(0,Math.ceil((state.powerUntil-now())/1000))}s`:(state.shopActive&&shopCount(state.shopActive)>0?`🎒 ${shopLabel(state.shopActive)}`:'🎒 —'));
     set('advWeather',state.weather==='rain'?'🌧️':state.weather==='storm'?'⛈️':state.weather==='fog'?'🌫️':'☀️');
     if(state.challenge){const c=state.challenge;set('advChallengeTitle',`🎯 ${c.label}`);set('advChallengeText',c.kind==='time'?`${formatTime(c.done)} / ${formatTime(c.target)}`:c.kind==='safe'?`${c.done===0?tr('بدون إصابة','No damage'):tr('تعرضت لضرر','Took damage')}`:`${Math.min(c.done,c.target)} / ${c.target}`);}
     set('advPowerUse',state.activePower?'Q':'—');
@@ -8360,6 +7631,101 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
     ctx.restore();
   }
 
+
+  const SHOP_PRICES={shield:25,laser:30,flight:35,invisibility:45,fire:40,speed:35,double:45,magnet:50,ghost:55};
+  const SHOP_ICONS={shield:'🛡️',laser:'🔫',flight:'✈️',invisibility:'👻',fire:'🔥',speed:'⚡',double:'🪽',magnet:'🧲',ghost:'🌫️'};
+  function shopLabel(type){
+    const ar={shield:'درع 10 ثوانٍ',laser:'حزمة ليزر (5 طلقات)',flight:'طيران 10 ثوانٍ',invisibility:'اختفاء 5 ثوانٍ',fire:'كرات نار',speed:'سرعة خارقة',double:'قفزة مزدوجة',magnet:'مغناطيس العملات',ghost:'شبح 8 ثوانٍ'};
+    const en={shield:'Shield 10s',laser:'Laser pack (5 shots)',flight:'Flight 10s',invisibility:'Invisibility 5s',fire:'Fireballs',speed:'Super speed',double:'Double jump',magnet:'Coin magnet',ghost:'Ghost 8s'};
+    return `${SHOP_ICONS[type]} ${tr(ar[type],en[type])}`;
+  }
+  function saveShop(){ saveProfile(); }
+  function shopCount(type){ if(type==='laser'){ const shots=typeof window.__shopLaserGetShots==='function'?Number(window.__shopLaserGetShots()||0):0; return Number(state.shop.laser||0)+(shots>0?1:0); } return Number(state.shop[type]||0); }
+  function setShopActive(type){ if(!SHOP_PRICES[type]||shopCount(type)<=0)return; state.shopActive=type; saveShop(); updateShopUI(); updateUI(); }
+  function useShopItem(){
+    const type=state.shopActive;
+    if(!type || shopCount(type)<=0){state.shopActive=null;updateShopUI();return false;}
+    if(!gameRunning||gameOver||gameWon)return false;
+    if(type==='laser'){
+      let shots=typeof window.__shopLaserGetShots==='function'?Number(window.__shopLaserGetShots()||0):0;
+      if(shots<=0){ state.shop.laser--; if(typeof window.__shopLaserAddShots==='function') window.__shopLaserAddShots(5); }
+      if(typeof window.__shopLaserFire==='function') window.__shopLaserFire();
+      const left=typeof window.__shopLaserGetShots==='function'?Number(window.__shopLaserGetShots()||0):0;
+      if(left<=0 && Number(state.shop.laser||0)<=0) state.shopActive=null;
+    } else if(type==='shield') { state.shop[type]--; state.shieldHits=1; state.shopTimedUntil=now()+10000; state.activePower='shield'; state.powerUntil=now()+10000; }
+    else if(type==='flight') { state.shop[type]--; state.shopTimedUntil=now()+10000; state.activePower='flight'; state.powerUntil=now()+10000; }
+    else if(type==='invisibility') { state.shop[type]--; state.shopTimedUntil=now()+5000; state.activePower='invisibility'; state.powerUntil=now()+5000; }
+    else if(type==='fire') { state.shop[type]--; state.fireReady=true; fireball(); }
+    else if(type==='speed') { state.shop[type]--; state.activePower='speed'; state.powerUntil=now()+15000; }
+    else if(type==='double') { state.shop[type]--; state.activePower='double'; state.powerUntil=now()+20000; state.doubleReady=true; }
+    else if(type==='magnet') { state.shop[type]--; state.activePower='magnet'; state.powerUntil=now()+20000; }
+    else if(type==='ghost') { state.shop[type]--; state.activePower='ghost'; state.powerUntil=now()+8000; state.ghostUntil=now()+8000; }
+    if(shopCount(type)<=0) state.shopActive=null;
+    saveShop(); updateShopUI(); updateUI();
+    announce(tr(`تم استخدام ${shopLabel(type)}`,`${shopLabel(type)} activated`),1400);
+    return true;
+  }
+  function shopRows(){
+    return Object.keys(SHOP_PRICES).map(type=>{
+      const active=state.shopActive===type;
+      const count=shopCount(type);
+      return `<button type="button" class="shop-item ${active?'selected':''}" data-shop-type="${type}">${shopLabel(type)} — ${SHOP_PRICES[type]} 🪙 <small>${tr(`المخزون: ${count}${active?' • محدد':''}`,`Stock: ${count}${active?' • Selected':''}`)}</small></button>`;
+    }).join('');
+  }
+  function updateShopUI(){
+    const box=document.getElementById('adventureShop'); if(!box)return;
+    const coinsEl=box.querySelector('#adventureShopCoins'); if(coinsEl)coinsEl.textContent=tr(`عملاتك: ${coins}`,`Your coins: ${coins}`);
+    const list=box.querySelector('#adventureShopItems'); if(list)list.innerHTML=shopRows();
+    box.querySelectorAll('[data-shop-type]').forEach(btn=>{
+      btn.onclick=()=>{
+        const type=btn.dataset.shopType, cost=SHOP_PRICES[type];
+        if(shopCount(type)>0){setShopActive(type);announce(tr(`تم تحديد ${shopLabel(type)}` ,`${shopLabel(type)} selected`),900);return;}
+        if(coins<cost){announce(tr('العملات غير كافية','Not enough coins'),1200);return;}
+        coins-=cost; state.shop[type]++; state.shopActive=type; saveShop(); updateHUD(); updateShopUI(); updateUI();
+        announce(tr(`تم شراء ${shopLabel(type)} — اضغط زر الاستخدام`,`Purchased ${shopLabel(type)} — press Use`),1500);
+      };
+    });
+    const close=box.querySelector('[data-shop-close]'); if(close)close.textContent=tr('إغلاق','Close');
+  }
+  function openShop(){
+    let box=document.getElementById('adventureShop');
+    if(!box){
+      box=document.createElement('div'); box.id='adventureShop';
+      box.innerHTML=`<div class="adventure-modal-box"><h2>${tr('🛒 المتجر','🛒 Shop')}</h2><div id="adventureShopCoins"></div><div id="adventureShopItems"></div><button type="button" data-shop-close class="menu-action menu-green">${tr('إغلاق','Close')}</button></div>`;
+      document.body.appendChild(box);
+      box.querySelector('[data-shop-close]').onclick=()=>box.style.display='none';
+    }
+    updateShopUI(); box.style.display='flex';
+  }
+  function ensureUseButton(){
+    let shopBtn=document.getElementById('adventureStoreButton');
+    if(!shopBtn){shopBtn=document.createElement('button');shopBtn.id='adventureStoreButton';shopBtn.type='button';shopBtn.textContent='🛒';document.body.appendChild(shopBtn);}
+    shopBtn.title=tr('المتجر','Shop');
+    shopBtn.style.display=gameRunning?'block':'none';
+    shopBtn.onclick=(e)=>{e.preventDefault();e.stopPropagation();openShop();};
+    let b=document.getElementById('adventureUseButton');
+    if(!b){b=document.createElement('button');b.id='adventureUseButton';b.type='button';document.body.appendChild(b);}
+    const active=state.shopActive&&shopCount(state.shopActive)>0;
+    b.textContent=active?SHOP_ICONS[state.shopActive]:'🎒';
+    b.title=active?tr(`استخدام ${shopLabel(state.shopActive)}`,'Use '+shopLabel(state.shopActive)) : tr('لا يوجد عنصر','No item');
+    b.style.display=(gameRunning&&active)?'block':'none';
+    b.onclick=(e)=>{e.preventDefault();e.stopPropagation();useShopItem();};
+  }
+  function addShopStyle(){
+    if(document.getElementById('canonicalAdventureShopStyle'))return;
+    const st=document.createElement('style');st.id='canonicalAdventureShopStyle';st.textContent=`
+      #adventureShop{position:fixed;inset:0;z-index:10080;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.66);font-family:system-ui,sans-serif}
+      .adventure-modal-box{width:min(94vw,520px);max-height:90vh;overflow:auto;background:#14202b;color:#fff;border-radius:22px;padding:20px;box-shadow:0 22px 70px rgba(0,0,0,.5);text-align:center}
+      #adventureShopItems{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}
+      #adventureShopItems .shop-item{min-height:70px;border:1px solid rgba(255,255,255,.14);border-radius:14px;background:#20303e;color:#fff;padding:10px;font-weight:900;cursor:pointer;text-align:center}
+      #adventureShopItems .shop-item.selected{outline:3px solid #27ae60;background:#254b38}
+      #adventureShopItems .shop-item small{display:block;margin-top:5px;opacity:.78;font-weight:700}
+      #adventureUseButton,#adventureStoreButton{position:fixed;top:12px;z-index:10075;width:50px;height:50px;border:0;border-radius:15px;background:#27ae60;color:#fff;font-size:24px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.3)}#adventureUseButton{right:72px}#adventureStoreButton{right:128px}
+      @media(max-width:700px){#adventureShopItems{grid-template-columns:1fr 1fr}.adventure-modal-box{padding:16px}#adventureUseButton,#adventureStoreButton{display:none!important}}
+      @media(max-width:420px){#adventureShopItems{grid-template-columns:1fr}}
+    `;document.head.appendChild(st);
+  }
+
   function upgradeMenu(){
     const old=document.getElementById('adventureUpgradePanel');if(old)old.remove();
     const el=document.createElement('div');el.id='adventureUpgradePanel';el.style.cssText='position:fixed;inset:0;z-index:10050;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);font-family:system-ui,sans-serif;';
@@ -8379,11 +7745,31 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
     el.querySelector('button').onclick=()=>el.remove();document.body.appendChild(el);
   }
 
+
+  function openChallengeMenu(){
+    let el=document.getElementById('adventureChallengeMenu');
+    if(!el){
+      el=document.createElement('div');el.id='adventureChallengeMenu';
+      el.innerHTML=`<div class="challenge-box"><h2 id="challengeMenuTitle"></h2><p id="challengeMenuHint"></p><div id="challengeOptions"></div><button type="button" class="challenge-option" id="challengeDisable"></button></div>`;
+      document.body.appendChild(el);
+    }
+    const title=el.querySelector('#challengeMenuTitle'),hint=el.querySelector('#challengeMenuHint'),opts=el.querySelector('#challengeOptions'),dis=el.querySelector('#challengeDisable');
+    title.textContent=tr('🎯 قسم التحديات','🎯 Challenges');
+    hint.textContent=tr('اختر تحديًا واحدًا. سيظهر التحدي المختار فقط أثناء اللعب.','Choose one challenge. Only the selected challenge appears during gameplay.');
+    const defs=[['coins','🪙 جمع العملات'],['kills','⚔️ هزيمة الأعداء'],['time','⏱️ الإنهاء بسرعة'],['safe','🛡️ بدون ضرر']];
+    opts.innerHTML=defs.map(([k,label])=>`<button type="button" class="challenge-option" data-challenge="${k}">${tr(label,label.replace('جمع العملات','Collect coins').replace('هزيمة الأعداء','Defeat enemies').replace('الإنهاء بسرعة','Finish quickly').replace('بدون ضرر','No damage'))}${state.challengeChoice===k?' ✓':''}</button>`).join('');
+    opts.querySelectorAll('[data-challenge]').forEach(b=>b.onclick=()=>{state.challengeEnabled=true;state.challengeChoice=b.dataset.challenge;saveProfile();el.style.display='none';announce(tr('تم اختيار التحدي. سيظهر عند بدء اللعب.','Challenge selected. It will appear when you play.'),1400);});
+    dis.textContent=state.challengeEnabled?tr('إيقاف التحديات','Disable challenges'):tr('إغلاق','Close');
+    dis.onclick=()=>{if(state.challengeEnabled){state.challengeEnabled=false;state.challengeChoice=null;state.challenge=null;saveProfile();announce(tr('تم إيقاف التحديات','Challenges disabled'),1200);}el.style.display='none';};
+    el.style.display='flex';
+  }
+
   function addMenuButtons(){
     const menu=document.getElementById('gameStartMenu');if(!menu||menu.dataset.adventureButtons)return;
     menu.dataset.adventureButtons='1';const card=menu.firstElementChild;if(!card)return;
-    const up=document.createElement('button');up.className='adventure-upgrade-btn';up.textContent=tr('👑 تطوير الشخصية','👑 Character Upgrades');up.style.cssText='display:block;width:100%;margin-top:12px;padding:12px;border:0;border-radius:14px;background:#8e44ad;color:#fff;font-size:17px;font-weight:800;cursor:pointer;';up.onclick=upgradeMenu;card.insertBefore(up,card.querySelector('.exit-btn'));
-    const ta=document.createElement('button');ta.className='adventure-time-btn';ta.textContent=tr('⏱️ تحدي السرعة','⏱️ Time Attack');ta.style.cssText='display:block;width:100%;margin-top:12px;padding:12px;border:0;border-radius:14px;background:#e67e22;color:#fff;font-size:17px;font-weight:800;cursor:pointer;';ta.onclick=()=>{state.timeAttack=true;currentLevel=1;score=0;coins=0;lives=3;gameOver=false;gameWon=false;changingLevel=false;loadLevel(1,true);menu.remove();if(settingsPanel)settingsPanel.remove();startGame();announce(tr('⏱️ تحدي السرعة بدأ!','⏱️ Time Attack started!'),1800);};card.insertBefore(ta,card.querySelector('.exit-btn'));
+    const up=document.createElement('button');up.className='adventure-menu-btn adventure-upgrade-btn menu-action menu-green';up.textContent=tr('👑 تطوير الشخصية','👑 Character Upgrades');up.onclick=upgradeMenu;card.insertBefore(up,card.querySelector('.exit-btn'));
+    const ch=document.createElement('button');ch.className='adventure-menu-btn adventure-challenge-btn menu-action menu-green';ch.textContent=tr('🎯 التحديات','🎯 Challenges');ch.onclick=openChallengeMenu;card.insertBefore(ch,card.querySelector('.exit-btn'));
+    const ta=document.createElement('button');ta.className='adventure-menu-btn adventure-time-btn menu-action menu-green';ta.textContent=tr('⏱️ تحدي السرعة','⏱️ Time Attack');ta.onclick=()=>{state.timeAttack=true;currentLevel=1;score=0;coins=0;lives=3;gameOver=false;gameWon=false;changingLevel=false;loadLevel(1,true);menu.remove();if(settingsPanel)settingsPanel.remove();startGame();announce(tr('⏱️ تحدي السرعة بدأ!','⏱️ Time Attack started!'),1800);};card.insertBefore(ta,card.querySelector('.exit-btn'));
   }
 
   // Wrap stable core functions once. No duplicate game loop is introduced.
@@ -8396,6 +7782,9 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
     const oldWalk=player.walkSpeed,oldRun=player.runSpeed;
     if(speedMode){player.walkSpeed*=1.45;player.runSpeed*=1.45;}
     const ok=oldUpdatePlayer();
+    if(state.activePower==='flight' && now()<state.powerUntil){
+      player.ground=false; player.vy=0; player.y=Math.min(player.y,Math.max(120,canvas.height-250));
+    } else if(state.activePower==='flight' && now()>=state.powerUntil){ state.activePower=null; }
     player.walkSpeed=oldWalk;player.runSpeed=oldRun;
     if(player.ground)state.doubleUsed=false;
     if(!ok)state.stageDeaths++;
@@ -8406,7 +7795,11 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
   const oldUpdateEnemies=updateEnemies;
   updateEnemies=function(){const ok=oldUpdateEnemies();monitorKills();return ok;};
   const oldDied=playerDied;
-  playerDied=function(reason='enemy'){const before=lives;oldDied(reason);if(lives<before)state.stageDeaths++;};
+  playerDied=function(reason='enemy'){
+    if(now()<state.powerUntil && (state.activePower==='ghost'||state.activePower==='invisibility')) return;
+    if(state.shieldHits>0){state.shieldHits=0;state.activePower=null;state.powerUntil=0;announce(tr('🛡️ الدرع صد الضربة!','🛡️ Shield blocked the hit!'),900);return;}
+    const before=lives;oldDied(reason);if(lives<before)state.stageDeaths++;
+  };
   const oldNext=nextLevel;
   nextLevel=function(){finalizeStage();if(state.boss&&state.boss.alive){announce(tr('👑 اهزم الزعيم أولًا!','👑 Defeat the boss first!'),1300);changingLevel=false;gameRunning=true;return;}oldNext();};
   const oldDraw=draw;
@@ -8424,17 +7817,9 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
   // Achievement shortcuts / upgrade controls.
   window.__nbAdventureUpgrade=upgradeMenu;
   window.__nbAdventureUsePower=activatePower;
-  if(typeof window.__nbShopUse==='function'){
-    const oldShopUse=window.__nbShopUse;
-    window.__nbShopUse=function(){
-      if(state.activePower){
-        const p=state.activePower; activatePower();
-        if(p==='fire') fireball();
-        updateUI(); return;
-      }
-      return oldShopUse();
-    };
-  }
+  window.__nbShopOpen=openShop;
+  window.__nbShopUse=useShopItem;
+  window.__nbShopGetActive=()=>state.shopActive&&shopCount(state.shopActive)>0?state.shopActive:null;
 
   // Keyboard shortcuts that don't collide with the existing core.
   window.addEventListener('keydown',e=>{

@@ -740,3 +740,24 @@ button#soundToggle {
   visibility: hidden !important;
   pointer-events: none !important;
 }
+
+/* ============================================================
+   CANONICAL RESPONSIVE UI OVERRIDES
+   One final layout contract for desktop + mobile.
+   ============================================================ */
+#gameStartMenu > div{max-height:92vh;overflow-y:auto;overflow-x:hidden;}
+#controls{bottom:14px;max-width:calc(100% - 28px);flex-wrap:wrap;justify-content:center;}
+#controls div{white-space:nowrap;}
+#safeMainMenuButton{top:14px!important;right:14px!important;}
+#adventureStoreButton,#adventureUseButton{top:14px!important;}
+#adventureStoreButton{right:126px!important;}
+#adventureUseButton{right:70px!important;}
+@media (max-width:700px){
+  #controls{display:none!important;}
+  #gameWrapper{min-height:100svh;}
+  #gameCanvas{height:650px;max-height:100svh;min-height:560px;}
+  #safeMainMenuButton{top:74px!important;right:10px!important;}
+  #adventureHUD{bottom:174px!important;left:8px!important;right:8px!important;max-width:calc(100vw - 16px)!important;}
+  #adventurePowerPanel{bottom:174px!important;right:8px!important;}
+  #adventureChallenge{top:92px!important;right:8px!important;max-width:min(46vw,220px)!important;}
+}
