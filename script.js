@@ -6193,9 +6193,10 @@ setLanguage(selectedLanguage);
       #score{display:none!important;}
       #laserControl{display:none!important;}
       #expansionHud {
-        position:fixed;left:12px;top:112px;z-index:9998;
-        display:flex;gap:7px;flex-wrap:wrap;max-width:48%;
-        font:700 13px system-ui,sans-serif;pointer-events:none;
+        position:fixed;left:50%;top:108px;transform:translateX(-50%);z-index:9998;
+        display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center;
+        width:min(760px,calc(100vw - 24px));max-width:calc(100vw - 24px);
+        font:800 12px system-ui,sans-serif;pointer-events:none;
       }
       #expansionHud span {
         background:rgba(15,20,30,.78);color:#fff;
@@ -6240,7 +6241,15 @@ setLanguage(selectedLanguage);
       #expansionShop button[data-buy]{background:linear-gradient(135deg,#f7f9fc,#e8eef7);color:#18202a;border:1px solid #d5dce6;font-size:14px;min-height:62px;text-align:center;padding:10px;margin:0;}
       #expansionShop button[data-buy]:hover { filter:brightness(.97); transform:translateY(-1px); }
       #expansionShop button[data-close] { background:#263238; color:#fff; font-size:16px; }
-      @media(max-width:700px){ #nbStoreButton{right:68px} #nbUseButton{right:122px} #nbPowerTimer{right:178px;bottom:86px;top:auto} }
+      /* The challenge remains selectable and tracked, but its floating gameplay panel is intentionally hidden. */
+      #adventureChallenge{display:none !important;}
+      @media(max-width:700px){
+        #nbStoreButton{right:68px}
+        #nbUseButton{right:122px}
+        #nbPowerTimer{right:178px;bottom:86px;top:auto}
+        #expansionHud{top:104px;width:calc(100vw - 20px);max-width:calc(100vw - 20px);gap:4px;font-size:10px}
+        #expansionHud span{padding:5px 7px;border-radius:9px}
+      }
       @media(min-width:701px){ #nbPowerTimer{right:188px;bottom:88px;top:auto} }
       .expansionTouch {
         position:fixed;bottom:70px;z-index:9999;border:0;border-radius:50%;
@@ -8056,13 +8065,13 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
     if(document.getElementById('adventureFeatureStyle')) return;
     const st=document.createElement('style'); st.id='adventureFeatureStyle';
     st.textContent=`
-      #adventureHUD{position:fixed;left:12px;bottom:14px;z-index:10020;display:none;gap:6px;flex-wrap:wrap;max-width:min(92vw,900px);font:800 12px system-ui,sans-serif;pointer-events:none}
+      #adventureHUD{position:fixed;left:50%;top:108px;bottom:auto;transform:translateX(-50%);z-index:10020;display:none;gap:6px;flex-wrap:wrap;justify-content:center;width:min(760px,calc(100vw - 24px));max-width:calc(100vw - 24px);font:800 12px system-ui,sans-serif;pointer-events:none}
       #adventureHUD span{background:rgba(10,18,28,.82);color:#fff;padding:7px 9px;border-radius:11px;box-shadow:0 3px 12px rgba(0,0,0,.22)}
       #adventureBanner{position:fixed;left:50%;top:14%;transform:translateX(-50%);z-index:10030;display:none;max-width:90vw;padding:12px 18px;border-radius:15px;background:rgba(9,16,26,.92);color:#fff;font:900 18px system-ui,sans-serif;text-align:center;box-shadow:0 10px 35px rgba(0,0,0,.35);pointer-events:none}
-      #adventureChallenge{position:fixed;right:12px;top:112px;z-index:10015;display:none;min-width:190px;max-width:270px;padding:10px;border-radius:14px;background:rgba(9,16,26,.78);color:#fff;font:700 12px system-ui,sans-serif;pointer-events:none}
+      #adventureChallenge{display:none !important;}
       #adventureChallenge b{display:block;font-size:14px;margin-bottom:4px}
       #adventurePowerPanel{position:fixed;right:12px;bottom:14px;z-index:10020;display:none;padding:8px 10px;border-radius:12px;background:rgba(9,16,26,.84);color:#fff;font:800 12px system-ui,sans-serif;pointer-events:none}
-      @media(max-width:700px){#adventureHUD{left:8px;right:8px;bottom:88px;max-width:calc(100vw - 16px)}#adventureChallenge{top:145px;right:8px;min-width:160px;max-width:45vw;font-size:10px}#adventureBanner{top:19%;font-size:15px}}
+      @media(max-width:700px){#adventureHUD{left:50%;right:auto;top:104px;bottom:auto;transform:translateX(-50%);width:calc(100vw - 20px);max-width:calc(100vw - 20px);justify-content:center}#adventureChallenge{display:none !important}#adventureBanner{top:19%;font-size:15px}}
     `;
     document.head.appendChild(st);
   }
@@ -8317,7 +8326,7 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
   function updateUI(){
     const active=!!(gameRunning&&!gameOver&&!gameWon);
     const hud=document.getElementById('adventureHUD'); if(hud)hud.style.display=active?'flex':'none';
-    const ch=document.getElementById('adventureChallenge'); if(ch)ch.style.display=active?'block':'none';
+    const ch=document.getElementById('adventureChallenge'); if(ch)ch.style.display='none';
     const pp=document.getElementById('adventurePowerPanel'); if(pp)pp.style.display=active?'block':'none';
     const elapsed=state.startTime?((now()-state.startTime)/1000):0;
     const combo=state.combo>0&&now()<state.comboUntil?state.combo:0;
