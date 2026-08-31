@@ -8078,7 +8078,7 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
   function addUI(){
     addStyle();
     for(const id of ['adventureHUD','adventureChallenge','adventurePowerPanel','adventureBanner']){
-      if(!document.getElementById(id)) document.body.insertAdjacentHTML('beforeend', id==='adventureHUD'?`<div id="adventureHUD"><span id="advCombo">🔥 ×0</span><span id="advGems">💎 0</span><span id="advTime">⏱️ 0:00</span><span id="advPower">🎒 —</span><span id="advWeather">☀️</span></div>`:id==='adventureChallenge'?`<div id="adventureChallenge"><b id="advChallengeTitle">🎯 Challenge</b><div id="advChallengeText"></div></div>`:id==='adventurePowerPanel'?`<div id="adventurePowerPanel">Q: <b id="advPowerUse">—</b></div>`:'');
+      if(!document.getElementById(id)) document.body.insertAdjacentHTML('beforeend', id==='adventureHUD'?`<div id="adventureHUD" aria-hidden="true"></div>`:id==='adventureChallenge'?`<div id="adventureChallenge"><b id="advChallengeTitle">🎯 Challenge</b><div id="advChallengeText"></div></div>`:id==='adventurePowerPanel'?`<div id="adventurePowerPanel" aria-hidden="true"></div>`:'');
     }
   }
 
@@ -8325,16 +8325,13 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
 
   function updateUI(){
     const active=!!(gameRunning&&!gameOver&&!gameWon);
-    const hud=document.getElementById('adventureHUD'); if(hud)hud.style.display=active?'flex':'none';
+    const hud=document.getElementById('adventureHUD'); if(hud)hud.style.display='none';
     const ch=document.getElementById('adventureChallenge'); if(ch)ch.style.display='none';
-    const pp=document.getElementById('adventurePowerPanel'); if(pp)pp.style.display=active?'block':'none';
+    const pp=document.getElementById('adventurePowerPanel'); if(pp)pp.style.display='none';
     const elapsed=state.startTime?((now()-state.startTime)/1000):0;
-    const combo=state.combo>0&&now()<state.comboUntil?state.combo:0;
+    const timer=document.getElementById('gameTimerValue'); if(timer)timer.textContent=formatTime(elapsed);
     const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
-    set('advCombo',`🔥 ×${combo}`);set('advGems',`💎 ${state.gems.filter(x=>x.collected).length}`);set('advTime',`⏱️ ${formatTime(elapsed)}`);set('advPower',state.activePower?`🎒 ${state.activePower} ${Math.max(0,Math.ceil((state.powerUntil-now())/1000))}s`:'🎒 —');
-    set('advWeather',state.weather==='rain'?'🌧️':state.weather==='storm'?'⛈️':state.weather==='fog'?'🌫️':'☀️');
     if(state.challenge){const c=state.challenge;set('advChallengeTitle',`🎯 ${c.label}`);set('advChallengeText',c.kind==='time'?`${formatTime(c.done)} / ${formatTime(c.target)}`:c.kind==='safe'?`${c.done===0?tr('بدون إصابة','No damage'):tr('تعرضت لضرر','Took damage')}`:`${Math.min(c.done,c.target)} / ${c.target}`);}
-    set('advPowerUse',state.activePower?'Q':'—');
     const banner=document.getElementById('adventureBanner');if(banner)banner.style.display=state.bannerUntil>now()? 'block':'none';
   }
 
