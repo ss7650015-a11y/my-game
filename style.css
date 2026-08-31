@@ -838,3 +838,28 @@ button#soundToggle {
     font-size: 9px !important;
   }
 }
+
+
+/* FINAL CLEAN HUD: one information bar only. */
+#expansionHud, #adventureHUD, #adventureChallenge, #adventurePowerPanel, #nbPowerTimer {
+  display:none !important;
+  visibility:hidden !important;
+  pointer-events:none !important;
+}
+#gameWrapper.reference-platformer #hud {
+  display:flex !important;
+  position:fixed !important;
+  top:8px !important;
+  left:50% !important;
+  right:auto !important;
+  transform:translateX(-50%) !important;
+  z-index:10010 !important;
+}
+@media (max-width:700px) {
+  #gameWrapper.reference-platformer #hud {
+    top:8px !important;
+    width:max-content !important;
+    max-width:calc(100vw - 12px) !important;
+    gap:4px !important;
+  }
+}

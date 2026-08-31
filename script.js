@@ -6261,11 +6261,10 @@ setLanguage(selectedLanguage);
   }
 
   function addHud() {
-    if (document.getElementById("expansionHud")) return;
-    const hud = document.createElement("div");
-    hud.id = "expansionHud";
-    hud.innerHTML = ``;
-    document.body.appendChild(hud);
+    // The game uses the single core #hud in index.html.
+    // Do not create a second/duplicate HUD.
+    const old = document.getElementById("expansionHud");
+    if (old) old.remove();
   }
 
   function getWallet() { return getCoins(); }
@@ -8132,7 +8131,7 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
   }
 
   function resetStage(){
-    state.stage=currentLevel; state.startTime=now(); state.kills=0; state.combo=0; state.comboUntil=0; state.completed=false; state.stageDeaths=0; state.activePower=null; state.powerUntil=0; state.doubleUsed=false; state.jumpWasDown=false;
+    state.stage=currentLevel; state.startTime=Date.now(); state.kills=0; state.combo=0; state.comboUntil=0; state.completed=false; state.stageDeaths=0; state.activePower=null; state.powerUntil=0; state.doubleUsed=false; state.jumpWasDown=false;
     state.boss=createBoss(); state.chase=null; state.event=null; state.nextEventAt=now()+18000+currentLevel*250; state.weather=['clear','rain','storm','fog'][currentLevel%4];
     state.challenge=stageChallenge(); state.eventSeed=currentLevel*9973; state._aliveSnapshot=new Map(); state.gemsCollected=0; state.shieldHits=state.upgrades.shield>0?1:0; state.eventRock=null; state.qWasDown=false; state.gWasDown=false;
     if(lives < 3 + Number(state.upgrades.health||0)) lives = 3 + Number(state.upgrades.health||0);
@@ -8324,15 +8323,25 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
   }
 
   function updateUI(){
-    const active=!!(gameRunning&&!gameOver&&!gameWon);
-    const hud=document.getElementById('adventureHUD'); if(hud)hud.style.display='none';
-    const ch=document.getElementById('adventureChallenge'); if(ch)ch.style.display='none';
-    const pp=document.getElementById('adventurePowerPanel'); if(pp)pp.style.display='none';
-    const elapsed=state.startTime?((now()-state.startTime)/1000):0;
-    const timer=document.getElementById('gameTimerValue'); if(timer)timer.textContent=formatTime(elapsed);
+    // Single visible gameplay HUD: coins, lives, stage and a LIVE timer.
+    // All expansion/legacy information strips stay hidden.
+    const legacyIds=['expansionHud','adventureHUD','adventureChallenge','adventurePowerPanel','nbPowerTimer'];
+    for(const id of legacyIds){ const e=document.getElementById(id); if(e) e.style.display='none'; }
+
+    const started=Number(state.startTime||0);
+    const elapsed=started>0 ? Math.max(0,(Date.now()-started)/1000) : 0;
+    const timer=document.getElementById('gameTimerValue');
+    if(timer) timer.textContent=formatTime(elapsed);
+
+    // Keep challenge progress internal; do not render a floating challenge HUD.
     const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
-    if(state.challenge){const c=state.challenge;set('advChallengeTitle',`🎯 ${c.label}`);set('advChallengeText',c.kind==='time'?`${formatTime(c.done)} / ${formatTime(c.target)}`:c.kind==='safe'?`${c.done===0?tr('بدون إصابة','No damage'):tr('تعرضت لضرر','Took damage')}`:`${Math.min(c.done,c.target)} / ${c.target}`);}
-    const banner=document.getElementById('adventureBanner');if(banner)banner.style.display=state.bannerUntil>now()? 'block':'none';
+    if(state.challenge){
+      const c=state.challenge;
+      set('advChallengeTitle',`🎯 ${c.label}`);
+      set('advChallengeText',c.kind==='time'?`${formatTime(c.done)} / ${formatTime(c.target)}`:c.kind==='safe'?`${c.done===0?tr('بدون إصابة','No damage'):tr('تعرضت لضرر','Took damage')}`:`${Math.min(c.done,c.target)} / ${c.target}`);
+    }
+    const banner=document.getElementById('adventureBanner');
+    if(banner) banner.style.display=state.bannerUntil>now() ? 'block' : 'none';
   }
 
   function drawExtras(){
@@ -8476,6 +8485,19 @@ const ENEMY_AI_PROFILES = Array.from({length:50}, (_,i) => {
       return oldShopUse();
     };
   }
+
+  // Final HUD cleanup: remove every legacy/duplicate gameplay information strip.
+  function cleanGameplayHud(){
+    for(const id of ['expansionHud','adventureHUD','adventureChallenge','adventurePowerPanel','nbPowerTimer']){
+      const el=document.getElementById(id);
+      if(el) el.remove();
+    }
+    const timer=document.getElementById('gameTimerValue');
+    if(timer && state.startTime){
+      timer.textContent=formatTime((Date.now()-state.startTime)/1000);
+    }
+  }
+  cleanGameplayHud();
 
   // Keyboard shortcuts that don't collide with the existing core.
   window.addEventListener('keydown',e=>{
